@@ -796,8 +796,10 @@ function debug_runonce()
 	--先检查下原有的连接；
 	if s_netmgr.client then
 		if socketer.isclose(s_netmgr.client) then
-			socketer.release(s_netmgr.client)
-			s_netmgr.client = nil
+
+			--原有连接断开，则当做退出命令处理
+			execute_command("q")
+			return
 		end
 	end
 
