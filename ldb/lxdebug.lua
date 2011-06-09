@@ -356,11 +356,11 @@ local function pushstring(str)
 	s_num = s_num + 1
 end
 local deep_table = {}
-local function debug_print_var(name,value,level)
+local function debug_print_var(name, value, level, pnum)
 	local prefix = string.rep("    ", level)
 	local str = string.format("%s%s = %s    [type:%s]", prefix, name, tostring(value), type(value))
 
-	if type(value) == "table" then
+	if type(value) == "table" and pnum ~= 0 then
 		
 		--加到临时表中,以免表出现循环引用时,打印也产生死循环
 		if not deep_table[name] then
@@ -377,8 +377,9 @@ local function debug_print_var(name,value,level)
 			
 		--打印表中所有数据
 		pushstring(string.format("%s%s = \n%s{", prefix, name, prefix))
+		pnum = pnum - 1
 		for k, v in pairs (value) do	
-			debug_print_var(k, v, level + 1)
+			debug_print_var(k, v, level + 1, pnum)
 		end
 		pushstring(prefix .. "}")
 	else
@@ -386,7 +387,7 @@ local function debug_print_var(name,value,level)
 	end
 end
 
-local function loop_print_var(var, value)
+local function loop_print_var(var, value, pnum)
 
 	local find 		= false
 	local begin_pos = 1
@@ -412,7 +413,7 @@ local function loop_print_var(var, value)
 		if value[name] then
 			if type(value[name]) == "table" then
 				if end_pos >= len then
-					debug_print_var(var, value[name], 0)
+					debug_print_var(var, value[name], 0, pnum)
 					find = true
 					break						
 				else
@@ -431,7 +432,7 @@ local function loop_print_var(var, value)
 end
 
 --打印变量的值
-local function debug_print_expr(var)
+local function debug_print_expr(var, pnum)
 
 	if not var then
 		pushstring(tostring(var).." is invalid.")
@@ -440,8 +441,8 @@ local function debug_print_expr(var)
 	
 	--清空临时变量表	
 	deep_table = {}
-	
-	if var == "G" then
+
+	if var == "G" or (var == "_G" and pnum == 1) then
 		for i, v in pairs(_G) do
 			pushstring(tostring(i).."    "..tostring(v))
 		end
@@ -454,7 +455,7 @@ local function debug_print_expr(var)
 		--在全局以及局部环境中找
 		local first_name = string.sub(var,string.find(var,"[_%a][_%w]*"))
 		if first_name == "_G" then
-			find = loop_print_var(var,_G)
+			find = loop_print_var(var,_G, pnum)
 		end
 		if not find then
 			local index = 1
@@ -465,7 +466,7 @@ local function debug_print_expr(var)
 				index = index + 1
 
 				if name == first_name then
-					find = loop_print_var(var,value)
+					find = loop_print_var(var,value, pnum)
 				end
 			end
 		end		
@@ -479,7 +480,7 @@ local function debug_print_expr(var)
 			index = index + 1
 
 			if name == var then
-				debug_print_var(var, value, 0)
+				debug_print_var(var, value, 0, pnum)
 				find = true
 				return
 			end
@@ -487,7 +488,7 @@ local function debug_print_expr(var)
 
 		--找全局变量
 		if _G[var] ~= nil then
-			debug_print_var(var, _G[var], 0)
+			debug_print_var(var, _G[var], 0, pnum)
 			find = true
 			return
 		end	
@@ -500,11 +501,11 @@ local function debug_print_expr(var)
 end
 
 --发送某个变量的值
-local function sendvariablevalue(var)
+local function sendvariablevalue(var, pnum)
 	s_num = 0
 	s_msg = packet.anyfirst()
 	packet.pushint16(s_msg, s_num)
-	debug_print_expr(var)
+	debug_print_expr(var, pnum)
 	packet.pushint16toindex(s_msg, 0, s_num)
 	sendmsg(s_msg)
 	s_msg = nil
@@ -546,7 +547,9 @@ local function execute_once(cmd)
 		end
 		return true
 	elseif c == "p" then
-		sendvariablevalue(arglist)
+		sendvariablevalue(arglist, -1)
+	elseif c == "pt" then
+		sendvariablevalue(arglist, 1)
 	elseif c == "b" then
 		local rs = string.find(arglist, ":")
 		local filename = string.sub(arglist, 1, rs - 1)

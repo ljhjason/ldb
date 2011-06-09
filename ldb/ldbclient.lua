@@ -27,6 +27,7 @@ local function print_help()
 	print("s                            step into")
 	print("n                            next")
 	print("p var                        print variable")
+	print("pt tablename                 print table key, value")
 	print("b ./filename/src.lua:line    add breakpoint")
 	print("d num/d *                    del breakpoint/del all breakpoint")
 	print("bl                           list breakpoint")
@@ -77,6 +78,11 @@ local function check_command(c, arglist)
 	elseif c == "n" then
 		return true
 	elseif c == "p" then
+		if not arglist then
+			return false
+		end
+		return true
+	elseif c == "pt" then
 		if not arglist then
 			return false
 		end
