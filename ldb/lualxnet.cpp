@@ -761,7 +761,7 @@ extern "C" int luaopen_lxnet(lua_State* L)
 
 	luaL_register(L, "idmgr", class_idmgr_function);
 
-	lua_pop(L, 8);
+	lua_pop(L, 7);
 
 	s_L = L;
 	signal(SIGINT, on_ctrl_hander);
