@@ -736,6 +736,17 @@ local function trace(event, line)
 			if src then
 				execute_command(src)
 			end
+		else
+			if not s_debugmgr.nextstep then
+				if s_debugmgr.runmodule == "useframefunc" then
+				--为useframefunc模式，则无断点的话就去掉行hook
+					if  debug.gethook() then
+						if (s_debugmgr.breaktable.num == 0) or (s_debugmgr.breaktable.validnum == 0) then
+							niltrace()
+						end
+					end
+				end
+			end
 		end
 	end
 end
