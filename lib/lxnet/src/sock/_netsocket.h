@@ -50,7 +50,7 @@ bool socketer_send_islimit (struct socketer *self, size_t len);
 /* set send event. */
 void socketer_checksend (struct socketer *self);
 
-void *socketer_getmsg (struct socketer *self);
+void *socketer_getmsg (struct socketer *self, char *buf, size_t bufsize);
 
 /* set recv event. */
 void socketer_checkrecv (struct socketer *self);

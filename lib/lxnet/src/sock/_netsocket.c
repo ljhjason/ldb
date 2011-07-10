@@ -352,14 +352,14 @@ void socketer_checksend (struct socketer *self)
 	}
 }
 
-void *socketer_getmsg (struct socketer *self)
+void *socketer_getmsg (struct socketer *self, char *buf, size_t bufsize)
 {
 	void *msg;
 	bool needclose;
 	assert(self != NULL);
 	if (!self)
 		return NULL;
-	msg = buf_getmessage(self->recvbuf, &needclose);
+	msg = buf_getmessage(self->recvbuf, &needclose, buf, bufsize);
 	if (needclose)
 		socketer_close(self);
 	return msg;

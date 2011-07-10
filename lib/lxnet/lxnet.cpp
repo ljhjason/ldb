@@ -237,9 +237,9 @@ void Socketer::CheckRecv ()
 }
 
 /* 接收数据*/
-Msg *Socketer::GetMsg ()
+Msg *Socketer::GetMsg (char *buf, size_t bufsize)
 {
-	return (Msg *)socketer_getmsg(m_self);
+	return (Msg *)socketer_getmsg(m_self, buf, bufsize);
 }
 
 

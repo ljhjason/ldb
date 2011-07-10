@@ -109,7 +109,7 @@ public:
 	void CheckRecv ();
 
 	/* 接收数据*/
-	Msg *GetMsg ();
+	Msg *GetMsg (char *buf = 0, size_t bufsize = 0);
 public:
 	struct socketer *m_self;
 };

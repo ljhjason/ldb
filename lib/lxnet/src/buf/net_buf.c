@@ -698,13 +698,23 @@ bool buf_pushmessage (struct net_buf *self, const char *msgbuf, int len)
 }
 
 /* get packet from the buffer, if error, then needclose is true. */
-char *buf_getmessage (struct net_buf *self, bool *needclose)
+char *buf_getmessage (struct net_buf *self, bool *needclose, char *buf, size_t bufsize)
 {
 	assert(self != NULL);
 	if (!self || !needclose)
 		return NULL;
 	*needclose = false;
-	return blocklist_getmessage(&self->logiclist, threadbuf_get_msg_buf(), needclose);
+	if (!buf || bufsize <= 0)
+		return blocklist_getmessage(&self->logiclist, threadbuf_get_msg_buf(), needclose);
+	else
+	{
+		if (bufsize < _MAX_MSG_LEN)
+		{
+			assert(false && "why bufsize < _MAX_MSG_LEN");
+			return NULL;
+		}
+		return blocklist_getmessage(&self->logiclist, buf, needclose);
+	}
 }
 
 /* 
