@@ -141,6 +141,30 @@ static int lua_log_error (lua_State *L)
 	return 0;
 }
 
+static int lua_makeint64by32 (lua_State *L)
+{
+	int32 high = luaL_checkinteger(L, 1);
+	int32 low = luaL_checkinteger(L, 2);
+	int64 res = 0;
+	res |= high;
+	res <<=32;
+	res |= low;
+	lua_pushnumber(L, (lua_Number) res);
+	return 1;
+}
+
+static int lua_parseint64 (lua_State *L)
+{
+	lua_Number resf = luaL_checknumber(L, 1);
+	int64 res = (int64)resf;
+	
+	int32 low = (int32)res;
+	int32 high = (int32)(res >> 32);
+	lua_pushinteger(L, high);
+	lua_pushinteger(L, low);
+	return 2;
+}
+
 static const struct luaL_reg g_function[] = {
 	{"delay", lua_delay},
 	{"getmillisecond", lua_get_millisecond},
@@ -148,6 +172,8 @@ static const struct luaL_reg g_function[] = {
 	{"log_setdirectory", lua_log_setdirectory},
 	{"log_writelog", lua_log_writelog},
 	{"log_error", lua_log_error},
+	{"makeint64by32", lua_makeint64by32},
+	{"parseint64", lua_parseint64},
 	{0, 0}
 };
 
@@ -348,6 +374,18 @@ static int luasocketer_getmsg (lua_State *L)
 	return 1;
 }
 
+static int luasocketer_getmsg_ldb (lua_State *L)
+{
+	static char s_buf[1024*256];
+	Socketer *sock = get_socketer(L, 1);
+	Msg *pMsg = sock->GetMsg(s_buf, sizeof(s_buf));
+	if (!pMsg)
+		lua_pushnil(L);
+	else
+		lua_pushnumber(L, (lua_Number )(intptr_t )pMsg);
+	return 1;
+}
+
 static int luasocketer_realsend (lua_State *L)
 {
 	Socketer *sock = get_socketer(L, 1);
@@ -377,6 +415,7 @@ static const struct luaL_reg class_socketer_function[] = {
 	{"getip", luasocketer_getip},
 	{"sendmsg", luasocketer_sendmsg},
 	{"getmsg", luasocketer_getmsg},
+	{"getmsg_ldb", luasocketer_getmsg_ldb},
 	{"realsend", luasocketer_realsend},
 	{"realrecv", luasocketer_realrecv},
 	{0, 0}
