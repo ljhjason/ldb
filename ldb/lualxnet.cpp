@@ -421,8 +421,17 @@ static const struct luaL_reg class_socketer_function[] = {
 	{0, 0}
 };
 
+static MessagePack s_anyfor_ldb;
 static MessagePack s_anyfirst;
 static MessagePack s_anysecond;
+
+static int luapacket_anyfor_ldb (lua_State *L)
+{
+	MessagePack *pack = &s_anyfor_ldb;
+	pack->ResetMsgLength();
+	lua_pushnumber(L, (lua_Number)(intptr_t)pack);
+	return 1;
+}
 
 static int luapacket_anyfirst (lua_State *L)
 {
@@ -602,6 +611,7 @@ static int luapacket_push32k (lua_State *L)
 }
 
 static const struct luaL_reg class_packet_function[] = {
+	{"anyfor_ldb", luapacket_anyfor_ldb},
 	{"anyfirst", luapacket_anyfirst},
 	{"anysecond", luapacket_anysecond},
 

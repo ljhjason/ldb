@@ -305,7 +305,7 @@ local function sendlist_source()
 		table.insert(retlines, src)
 		num = 1
 	end
-	local msg = packet.anyfirst()
+	local msg = packet.anyfor_ldb()
 	packet.pushint16(msg, num)
 	for k, v in pairs(retlines) do
 		packet.pushstring(msg, v)
@@ -315,7 +315,7 @@ end
 
 --发送调用栈信息
 local function send_tracebackinfo()
-	local msg = packet.anyfirst()
+	local msg = packet.anyfor_ldb()
 	packet.pushint16(msg, 1)
 	packet.pushstring(msg, debug.traceback("", 5))
 	sendmsg(msg)
@@ -323,7 +323,7 @@ end
 
 --发送断点列表信息
 local function sendbreakpointlist()
-	local msg = packet.anyfirst()
+	local msg = packet.anyfor_ldb()
 	local num = 1
 	packet.pushint16(msg, num)
 	if s_debugmgr.breaktable.num == 0 then
@@ -503,7 +503,7 @@ end
 --发送某个变量的值
 local function sendvariablevalue(var, pnum)
 	s_num = 0
-	s_msg = packet.anyfirst()
+	s_msg = packet.anyfor_ldb()
 	packet.pushint16(s_msg, s_num)
 	debug_print_expr(var, pnum)
 	packet.pushint16toindex(s_msg, 0, s_num)
@@ -555,24 +555,24 @@ local function execute_once(cmd)
 		local filename = string.sub(arglist, 1, rs - 1)
 		local line = string.sub(arglist, rs + 1)
 		line = tonumber(line)
-		local msg = packet.anyfirst()
+		local msg = packet.anyfor_ldb()
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, addbreakpoint(line, filename))
 		sendmsg(msg)
 	elseif c == "d" then
-		local msg = packet.anyfirst()
+		local msg = packet.anyfor_ldb()
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, delbreakpoint(arglist))
 		sendmsg(msg)
 	elseif c == "bl" then
 		sendbreakpointlist()
 	elseif c == "be" then
-		local msg = packet.anyfirst()
+		local msg = packet.anyfor_ldb()
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, enablebreakpoint(arglist))
 		sendmsg(msg)
 	elseif c == "bd" then
-		local msg = packet.anyfirst()
+		local msg = packet.anyfor_ldb()
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, disablebreakpoint(arglist))
 		sendmsg(msg)
@@ -597,7 +597,7 @@ local function waitcommand ()
 		if socketer.isclose(s_netmgr.client) then
 			return "q"
 		end
-		msg = socketer.getmsg(s_netmgr.client)
+		msg = socketer.getmsg_ldb(s_netmgr.client)
 		if msg then
 			break
 		else
@@ -660,7 +660,7 @@ local function noblockwaitcommand()
 	socketer.realsend(s_netmgr.client)
 	socketer.realrecv(s_netmgr.client)
 	local str
-	local msg = socketer.getmsg(s_netmgr.client)
+	local msg = socketer.getmsg_ldb(s_netmgr.client)
 	if msg then
 		packet.begin(msg)
 		str = packet.getstring(msg)
@@ -713,7 +713,7 @@ local function trace(event, line)
 		--回馈这行的信息
 		local filename = assert(string.sub(env.source, 2, #env.source))
 		local retlines, num = getfileline(filename, line, 1)
-		local msg = packet.anyfirst()
+		local msg = packet.anyfor_ldb()
 		if touchbpstr then
 			num = num + 1
 		end
