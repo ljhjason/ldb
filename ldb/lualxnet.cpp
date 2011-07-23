@@ -115,6 +115,7 @@ static int lua_getfullname (lua_State *L)
 	char srcname[1024*2];
 	snprintf(srcname, sizeof(srcname)-1, "/proc/%ld/fd/%d", (long)getpid(), fd);
 	readlink(srcname, buf, sizeof(buf)-1);
+	close(fd);
 #endif
 	lua_pushstring(L, buf);
 	return 1;
