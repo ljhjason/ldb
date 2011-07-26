@@ -111,6 +111,7 @@ local function addbreakpoint(line, source)
 			break
 		end
 	end
+	f:close()
 
 	--没找到这个行，
 	if count ~= line then
@@ -277,6 +278,7 @@ local function getfileline (filename, beginline, linecount)
 			linenum = linenum + 1
 		end
 	end
+	f:close()
 	return retlines, linenum
 end
 
