@@ -552,6 +552,12 @@ local function execute_once(cmd)
 		sendvariablevalue(arglist, -1)
 	elseif c == "pt" then
 		sendvariablevalue(arglist, 1)
+	elseif c == "see" then
+		sendvariablevalue(arglist, -1)
+		return true
+	elseif c == "seet" then
+		sendvariablevalue(arglist, 1)
+		return true
 	elseif c == "b" then
 		local rs = string.find(arglist, ":")
 		local filename = string.sub(arglist, 1, rs - 1)

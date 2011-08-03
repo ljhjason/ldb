@@ -28,6 +28,8 @@ local function print_help()
 	print("n                            next")
 	print("p var                        print variable")
 	print("pt tablename                 print table key, value")
+	print("see var                      print variable, but not block!")
+	print("seet tablename               print table key, value, but not block!")
 	print("b ./filename/src.lua:line    add breakpoint")
 	print("d num/d *                    del breakpoint/del all breakpoint")
 	print("bl                           list breakpoint")
@@ -83,6 +85,16 @@ local function check_command(c, arglist)
 		end
 		return true
 	elseif c == "pt" then
+		if not arglist then
+			return false
+		end
+		return true
+	elseif c == "see" then
+		if not arglist then
+			return false
+		end
+		return true
+	elseif c == "seet" then
 		if not arglist then
 			return false
 		end
