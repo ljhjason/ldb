@@ -20,6 +20,7 @@ extern "C"
 };
 
 #include <signal.h>
+#include <time.h>
 #include "crosslib.h"
 #include "log.h"
 #include "idmgr.h"
@@ -98,6 +99,22 @@ static int lua_delay (lua_State *L)
 	return 0;
 }
 
+static int krand (int min, int max)
+{
+	int temp = min;
+	min = temp > max ? max: temp;
+	max = max < temp ? temp: max;
+	return (min + rand() % (max - min  + 1));
+}
+
+static int lua_krand (lua_State *L)
+{
+	int arg1 = luaL_checkinteger(L, 1);
+	int arg2 = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, krand(arg1, arg2));
+	return 1;
+}
+
 static int lua_get_millisecond (lua_State *L)
 {
 	lua_pushnumber(L, (lua_Number )get_millisecond());
@@ -167,6 +184,7 @@ static int lua_parseint64 (lua_State *L)
 }
 
 static const struct luaL_reg g_function[] = {
+	{"rand", lua_krand},
 	{"delay", lua_delay},
 	{"getmillisecond", lua_get_millisecond},
 	{"getfilefullname", lua_getfullname},
@@ -816,6 +834,7 @@ extern "C" int luaopen_lxnet(lua_State* L)
 	s_L = L;
 	signal(SIGINT, on_ctrl_hander);
 
+	srand(time(NULL));
 	return 1;
 }
 
