@@ -20,6 +20,7 @@ extern "C"
 };
 
 #include <signal.h>
+#include <stdlib.h>
 #include <time.h>
 #include "crosslib.h"
 #include "log.h"
