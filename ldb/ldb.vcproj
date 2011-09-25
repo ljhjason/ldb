@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="lxnet-debug.lib lualib-debug.lib"
+				AdditionalDependencies="lxnet-debug.lib lualib-debug.lib ole32.lib"
 				OutputFile=".\$(ProjectName).dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib\lxnet;&quot;..\lib\lua-5.1.4&quot;"
@@ -137,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="lxnet-release.lib lualib-release.lib"
+				AdditionalDependencies="lxnet-release.lib lualib-release.lib ole32.lib"
 				OutputFile=".\$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\lib\lxnet;&quot;..\lib\lua-5.1.4&quot;"

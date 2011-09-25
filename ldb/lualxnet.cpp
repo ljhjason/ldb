@@ -7,9 +7,20 @@
 
 #ifdef WIN32
 #include <windows.h>
+#include <objbase.h>
 #else
 #include <fcntl.h>
 #include <unistd.h>
+#include <uuid/uuid.h>
+
+typedef struct _GUID
+{
+	unsigned int Data1;
+	unsigned short Data2;
+	unsigned short Data3;
+	unsigned char Data4[8];
+}GUID, UUID;
+
 #endif
 
 extern "C"
@@ -90,6 +101,34 @@ static const struct luaL_reg class_lxnet_function[] = {
 	{"meminfo", lualxnet_meminfo},
 	{0, 0}
 };
+
+
+static int lua_create_guid (lua_State *L)
+{
+	char buf[128] = {0};
+	GUID guid;
+
+#ifdef WIN32
+	CoCreateGuid(&guid);
+#else
+	uuid_generate((unsigned char *)(&guid));
+#endif
+
+#ifdef WIN32
+	_snprintf
+#else
+	snprintf
+#endif
+		(buf, sizeof(buf), "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", 
+			guid.Data1, guid.Data2, guid.Data3, 
+			guid.Data4[0], guid.Data4[1],
+			guid.Data4[2], guid.Data4[3],
+			guid.Data4[4], guid.Data4[5],
+			guid.Data4[6], guid.Data4[7]);
+
+	lua_pushstring(L, buf);
+	return 1;
+}
 
 static int lua_delay (lua_State *L)
 {
@@ -185,6 +224,7 @@ static int lua_parseint64 (lua_State *L)
 }
 
 static const struct luaL_reg g_function[] = {
+	{"create_guid", lua_create_guid},
 	{"rand", lua_krand},
 	{"delay", lua_delay},
 	{"getmillisecond", lua_get_millisecond},

@@ -46,16 +46,16 @@ none:
 	@echo " $(PLATS)"
 
 win32-debug:
-	$(MAKE) all INCS=-I"c:/mingw/include" LIBS=-L"c:/mingw/lib" CFLAGS="-march=i686 -Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
+	$(MAKE) all INCS=-I"c:/mingw/include" LIBS=-L"c:/mingw/lib" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
 
 win32-release:
-	$(MAKE) all INCS=-I"c:/mingw/include" LIBS=-L"c:/mingw/lib" CFLAGS="-march=i686 -Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
+	$(MAKE) all INCS=-I"c:/mingw/include" LIBS=-L"c:/mingw/lib" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
 
 linux-debug:
-	$(MAKE) all INCS=-I"/usr/include" LIBS=-L"/usr/lib" CFLAGS="-fPIC -march=i686 -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
+	$(MAKE) all INCS=-I"/usr/include" LIBS=-L"/usr/lib" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
 
 linux-release:
-	$(MAKE) all INCS=-I"/usr/include" LIBS=-L"/usr/lib" CFLAGS="-fPIC -march=i686 -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
+	$(MAKE) all INCS=-I"/usr/include" LIBS=-L"/usr/lib" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
 
 all:$(BIN)
 

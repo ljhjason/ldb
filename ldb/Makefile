@@ -47,16 +47,16 @@ none:
 	@echo " $(PLATS)"
 
 win32-debug:
-	$(MAKE) all BIN="lxnet.dll" INCS=-I"c:/mingw/include" LIBS="-L"c:/mingw/lib" -L"./../lib/lxnet" -llxnet -lws2_32 -L"./../lib/lua-5.1.4/src/" -llua" CFLAGS="-march=i686 -Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
+	$(MAKE) all BIN="lxnet.dll" INCS=-I"c:/mingw/include" LIBS="-L"c:/mingw/lib" -L"./../lib/lxnet" -llxnet -lws2_32 -L"./../lib/lua-5.1.4/src/" -llua -lole32" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
 
 win32-release:
-	$(MAKE) all BIN="lxnet.dll" INCS=-I"c:/mingw/include" LIBS="-L"c:/mingw/lib" -L"./../lib/lxnet" -llxnet -lws2_32 -L"./../lib/lua-5.1.4/src" -llua" CFLAGS="-march=i686 -Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
+	$(MAKE) all BIN="lxnet.dll" INCS=-I"c:/mingw/include" LIBS="-L"c:/mingw/lib" -L"./../lib/lxnet" -llxnet -lws2_32 -L"./../lib/lua-5.1.4/src" -llua -lole32" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
 
 linux-debug:
-	$(MAKE) all BIN="lxnet.so" INCS=-I"/usr/include" LIBS="-L"/usr/lib" -L"./../lib/lxnet" -llxnet -lpthread -L"./../lib/lua-5.1.4/src" -llua" CFLAGS="-fPIC -march=i686 -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
+	$(MAKE) all BIN="lxnet.so" INCS=-I"/usr/include" LIBS="-L"/usr/lib" -L"./../lib/lxnet" -llxnet -lpthread -L"./../lib/lua-5.1.4/src" -llua -luuid" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
 
 linux-release:
-	$(MAKE) all BIN="lxnet.so" INCS=-I"/usr/include" LIBS="-L"/usr/lib" -L"./../lib/lxnet" -llxnet -lpthread -L"./../lib/lua-5.1.4/src" -llua" CFLAGS="-fPIC -march=i686 -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
+	$(MAKE) all BIN="lxnet.so" INCS=-I"/usr/include" LIBS="-L"/usr/lib" -L"./../lib/lxnet" -llxnet -lpthread -L"./../lib/lua-5.1.4/src" -llua -luuid" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
 
 all:$(BIN)
 
