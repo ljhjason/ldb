@@ -30,6 +30,7 @@ extern "C"
 #include <lualib.h>
 };
 
+#include <limits.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <time.h>
@@ -549,21 +550,22 @@ static int luapacket_pushstring (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
 	const char *str = luaL_checkstring(L, 2);
-	pack->PushString(str);
+	int16 needwrite = luaL_optinteger(L, 3, SHRT_MAX - 3);
+
+	if (needwrite < 0 || needwrite > SHRT_MAX - 3)
+		needwrite = SHRT_MAX - 3;
+	pack->PushString(str, needwrite);
 	return 0;
 }
 
 static int luapacket_getstring (lua_State *L)
 {
-#define MAX_STRING_SIZE (31*1024)
 	static char buf[33*1024];
-	assert(MAX_STRING_SIZE <= sizeof(buf));
 
 	MessagePack *pack = get_messagepack(L, 1);
-	int16 needread = luaL_optinteger(L, 2, MAX_STRING_SIZE);
-	luaL_argcheck(L, needread > 0, 2, "getstring, size need greater than zero");
-	if (needread <= 0 || needread > MAX_STRING_SIZE)
-		needread = MAX_STRING_SIZE;
+	int16 needread = luaL_optinteger(L, 2, SHRT_MAX);
+	if (needread <= 0 || needread > SHRT_MAX)
+		needread = SHRT_MAX;
 	pack->GetString(buf, needread);
 	lua_pushstring(L, buf);
 	return 1;

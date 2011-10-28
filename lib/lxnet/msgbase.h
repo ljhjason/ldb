@@ -93,11 +93,13 @@ struct MessagePack:public Msg
 		return true;
 	}
 
-	bool PushString(const char *str)
+	bool PushString(const char *str, int16 maxpush = SHRT_MAX - 3)
 	{
 		size_t strsize = strlen(str);
-		assert(strsize < SHRT_MAX);
+		assert(strsize < SHRT_MAX - 3);
 		int16 size = (int16)strsize;
+		if (size > maxpush)
+			size = maxpush;
 		assert(size >= 0);
 		if (size < 0)
 			return false;
