@@ -52,21 +52,21 @@ static int lualxnet_init(lua_State *L)
 		return 1;
 	}
 	int smallbufnum = (int)luaL_checkinteger(L, 2);
-	luaL_argcheck(L, smallbufnum >= 1, 1, "buf num is must greater than 1");
+	luaL_argcheck(L, smallbufnum >= 1, 2, "buf num is must greater than 1");
 	if (smallbufnum < 1)
 	{
 		lua_pushboolean(L, 0);
 		return 1;
 	}
 	int listenernum = (int)luaL_checkinteger(L, 3);
-	luaL_argcheck(L, listenernum >= 1, 1, "listen object num is must greater than 1");
+	luaL_argcheck(L, listenernum >= 1, 3, "listen object num is must greater than 1");
 	if (listenernum < 1)
 	{
 		lua_pushboolean(L, 0);
 		return 1;
 	}
 	int socketnum = (int)luaL_checkinteger(L, 4);
-	luaL_argcheck(L, socketnum >= 1, 1, "socket object num is must greater than 1");
+	luaL_argcheck(L, socketnum >= 1, 4, "socket object num is must greater than 1");
 	if (listenernum < 1)
 	{
 		lua_pushboolean(L, 0);
@@ -654,6 +654,16 @@ static int luapacket_getint64 (lua_State *L)
 	return 1;
 }
 
+static int luapacket_pushint8toindex (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int index = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, index >= 0, 2, "pushint8toindex, index need greater than or equal to zero");
+	int8 value = (int8)luaL_checkinteger(L, 3);
+	pack->PutDataNotAddLength(index, &value, sizeof(value));
+	return 0;
+}
+
 static int luapacket_pushint16toindex (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
@@ -661,6 +671,57 @@ static int luapacket_pushint16toindex (lua_State *L)
 	luaL_argcheck(L, index >= 0, 2, "pushint16toindex, index need greater than or equal to zero");
 	int16 value = (int16)luaL_checkinteger(L, 3);
 	pack->PutDataNotAddLength(index, &value, sizeof(value));
+	return 0;
+}
+
+static int luapacket_pushint32toindex (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int index = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, index >= 0, 2, "pushint32toindex, index need greater than or equal to zero");
+	int32 value = (int32)luaL_checkinteger(L, 3);
+	pack->PutDataNotAddLength(index, &value, sizeof(value));
+	return 0;
+}
+
+static int luapacket_pushint64toindex (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int index = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, index >= 0, 2, "pushint64toindex, index need greater than or equal to zero");
+	int64 value = (int64)luaL_checknumber(L, 3);
+	pack->PutDataNotAddLength(index, &value, sizeof(value));
+	return 0;
+}
+
+static int luapacket_pushfixedstringtoindex (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int index = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, index >= 0, 2, "pushfixedstringtoindex, index need greater than or equal to zero");
+	const char *str = luaL_checkstring(L, 3);
+	int16 needwrite = luaL_checkinteger(L, 4);
+	luaL_argcheck(L, needwrite >= 0, 4, "pushfixedstringtoindex, fixed length need greater than or equal to zero");
+	luaL_argcheck(L, needwrite <= 512, 4, "pushfixedstringtoindex, fixed length need less than or equal to 512");
+
+	size_t strsize = strlen(str);
+	if (strsize > needwrite)
+		strsize = needwrite;
+
+	int16 secondpush = needwrite - (int16)strsize;
+	pack->PutDataNotAddLength(index, &needwrite, sizeof(needwrite));
+	index += sizeof(needwrite);
+	
+	if (strsize > 0)
+	{
+		pack->PutDataNotAddLength(index, (void *)str, strsize);
+		index += strsize;
+	}
+
+	static char s_buf[513] = {0};
+
+	if (secondpush > 0)
+		pack->PutDataNotAddLength(index, (void *)s_buf, (size_t)secondpush);
 	return 0;
 }
 
@@ -694,7 +755,11 @@ static const struct luaL_reg class_packet_function[] = {
 	{"getint32", luapacket_getint32},
 	{"pushint64", luapacket_pushint64},
 	{"getint64", luapacket_getint64},
+	{"pushint8toindex", luapacket_pushint8toindex},
 	{"pushint16toindex", luapacket_pushint16toindex},
+	{"pushint32toindex", luapacket_pushint32toindex},
+	{"pushint64toindex", luapacket_pushint64toindex},
+	{"pushfixedstringtoindex", luapacket_pushfixedstringtoindex},
 	{"push32k", luapacket_push32k},
 	{0, 0}
 };
