@@ -198,7 +198,7 @@ local function parserecvmsg(msg)
 		if string.find(resstr, "\n") == 1 then
 			resstr = string.sub(resstr, 2, #resstr)
 		end
-		print(resstr)
+		io.write(resstr)
 		resnum = resnum - 1
 	end
 end

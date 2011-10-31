@@ -355,12 +355,10 @@ end
 
 local s_num = 0
 local s_msg = nil
---装入字符串
-local function localpushstring(str)
+
+--真实的装入
+local function realpushstring(str)
 	local strlen = string.len(str)
-	if strlen >= 32760 then
-		assert(nil, debug.traceback("", 1))
-	end
 	if not packet.canpush(s_msg, strlen + 4) then
 		packet.settype(s_msg, 1)
 		packet.pushint16toindex(s_msg, 0, s_num)
@@ -375,6 +373,32 @@ local function localpushstring(str)
 	packet.pushstring(s_msg, str)
 	s_num = s_num + 1
 end
+
+--装入字符串
+local function localpushstring(str)
+	str = str .. '\n'
+	local strlen = string.len(str)
+	local delay = 32750
+	if strlen > delay then
+		--看需要分拆成几段
+		local begin = 0
+		local endidx = delay
+		local second
+		while true do
+			second = string.sub(str, begin, endidx)
+			realpushstring(second)
+			if endidx + delay >= strlen then
+				break
+			end
+			begin = endidx + 1
+			endidx = endidx + delay
+		end
+
+		str = string.sub(str, endidx + 1)
+	end
+	realpushstring(str)
+end
+
 local deep_table = {}
 local function debug_print_var(name, value, level, pnum)
 	local prefix = string.rep("    ", level)
