@@ -79,12 +79,15 @@ void socket_setup_recvevent (struct socketer *self)
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 
+	assert(self->recvlock == 1);
+
 	self->events |= EPOLLIN;
 	ev.events = self->events;
 	ev.data.ptr = self;
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
 		/*log_error("epoll, setup recv event to epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
+		atom_dec(&self->recvlock);
 		socketer_close(self);
 	}
 	debuglog("setup recv event to eventmgr.");
@@ -113,12 +116,15 @@ void socket_setup_sendevent (struct socketer *self)
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 
+	assert(self->sendlock == 1);
+
 	self->events |= EPOLLOUT;
 	ev.events = self->events;
 	ev.data.ptr = self;
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
 		/*log_error("epoll, setup send event to epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
+		atom_dec(&self->sendlock);
 		socketer_close(self);
 	}
 	debuglog("setup send event to eventmgr.");
@@ -232,6 +238,8 @@ static int leader_func (void *argv)
 bool eventmgr_init (int socketnum, int threadnum)
 {
 	if (s_mgr)
+		return false;
+	if (socketnum < 1)
 		return false;
 	if (socketnum > (SOCKET_HOLDER_SIZE - 6000))
 		return false;

@@ -70,8 +70,8 @@ void socket_setup_recvevent (struct socketer *self)
 		if (WSAGetLastError() != WSA_IO_PENDING)
 		{
 			debuglog("socket_setup_recvevent error!, error:%d\n", WSAGetLastError());
-			socketer_close(self);
 			atom_dec(&self->recvlock);
+			socketer_close(self);
 		}
 	}
 }
@@ -101,8 +101,8 @@ void socket_setup_sendevent (struct socketer *self)
 		if (WSAGetLastError() != WSA_IO_PENDING)
 		{
 			debuglog("socket_setup_sendevent error!, error:%d\n", WSAGetLastError());
-			socketer_close(self);
 			atom_dec(&self->sendlock);
+			socketer_close(self);
 		}
 	}
 }
@@ -134,8 +134,8 @@ void socket_senddata (struct socketer *self, char *data, int len)
 		if (WSAGetLastError() != WSA_IO_PENDING)
 		{
 			debuglog("socket_senddata error!, error:%d\n", WSAGetLastError());
-			socketer_close(self);
 			atom_dec(&self->sendlock);
+			socketer_close(self);
 		}
 	}
 }

@@ -462,19 +462,22 @@ void socketer_on_recv (struct socketer *self)
 		assert(writebuf.len >= 0);
 		if (writebuf.len <= 0)
 		{
+			atom_dec(&self->recvlock);
+
 			if (!buf_recv_end_do(self->recvbuf))
 			{
 				/* uncompress error, close socket. */
 				socketer_close(self);
 				return;
 			}
+
 #ifndef WIN32
 			/* remove recv event. */
 			socket_remove_recvevent(self);
 #endif
-			atom_dec(&self->recvlock);
 			return;
 		}
+
 		res = recv(self->sockfd, writebuf.buf, writebuf.len, 0);
 		if (res > 0)
 		{
@@ -486,6 +489,7 @@ void socketer_on_recv (struct socketer *self)
 			if (!buf_recv_end_do(self->recvbuf))
 			{
 				/* uncompress error, close socket. */
+				atom_dec(&self->recvlock);
 				socketer_close(self);
 				return;
 			}
@@ -493,6 +497,7 @@ void socketer_on_recv (struct socketer *self)
 			if ((!SOCKET_ERR_RW_RETRIABLE(NET_GetLastError())) || (res == 0))
 			{
 				/* error, close socket. */
+				atom_dec(&self->recvlock);
 				socketer_close(self);
 				debuglog("recv func, socket is error!, so close it!\n");
 			}
@@ -535,13 +540,15 @@ void socketer_on_send (struct socketer *self, int len)
 		assert(readbuf.len >= 0);
 		if (readbuf.len <= 0)
 		{
+			atom_dec(&self->sendlock);
+
 #ifndef WIN32
 			/* remove send event. */
 			socket_remove_sendevent(self);
 #endif
-			atom_dec(&self->sendlock);
 			return;
 		}
+
 		res = send(self->sockfd, readbuf.buf, readbuf.len, 0);
 		if (res > 0)
 		{
@@ -553,6 +560,7 @@ void socketer_on_send (struct socketer *self, int len)
 			if (!SOCKET_ERR_RW_RETRIABLE(NET_GetLastError()))
 			{
 				/* error, close socket. */
+				atom_dec(&self->sendlock);
 				socketer_close(self);
 				debuglog("send func, socket is error!, so close it!\n");
 			}
@@ -611,8 +619,15 @@ void socketmgr_run ()
 			{
 				log_error(" if (sock != resock)");
 				if (resock)
+				{
+					if (resock->recvlock != 0 || resock->sendlock != 0)
+						log_error("%x socket recvlock:%d, sendlock:%d", resock, (int)resock->recvlock, (int)resock->sendlock);
 					socketer_real_release(resock);
+				}
 			}
+
+			if (sock->recvlock != 0 || sock->sendlock != 0)
+				log_error("%x socket recvlock:%d, sendlock:%d", sock, (int)sock->recvlock, (int)sock->sendlock);
 			socketer_real_release(sock);
 		}
 	}
