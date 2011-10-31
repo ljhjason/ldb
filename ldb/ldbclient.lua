@@ -237,14 +237,20 @@ local function execute_command(cmd)
 
 			--等待回馈
 			s_debugmgr.currentstate = "waitrecv"
-			local msg = waitrecvmsg()
-			s_debugmgr.currentstate = "unknow"
-			if not msg then
-				print("wait recv msg failed!, disconnect")
-				return false
+			local msg
+			while true do
+				msg = waitrecvmsg()
+				s_debugmgr.currentstate = "unknow"
+				if not msg then
+					print("wait recv msg failed!, disconnect")
+					return false
+				end
+				--解析回馈并做一些处理
+				parserecvmsg(msg)
+				if packet.gettype(msg) == 0 then
+					break
+				end
 			end
-			--解析回馈并做一些处理
-			parserecvmsg(msg)
 		elseif rest == false then
 			print('Command arguments Invalid. command: '..cmd)
 		elseif rest == nil then

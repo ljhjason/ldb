@@ -517,6 +517,16 @@ static MessagePack *get_messagepack (lua_State *L, int idx)
 	return pack;
 }
 
+static int luapacket_canpush (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int16 trypushnum = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, trypushnum > 0, 2, "canpush, trypushnum need greater than to zero");
+	luaL_argcheck(L, trypushnum <= SHRT_MAX - 7, 2, "canpush, trypushnum need less than or equal to 32760");
+	lua_pushboolean(L, pack->CanPush(trypushnum));
+	return 1;
+}
+
 static int luapacket_reset (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
@@ -738,6 +748,7 @@ static const struct luaL_reg class_packet_function[] = {
 	{"anyfirst", luapacket_anyfirst},
 	{"anysecond", luapacket_anysecond},
 
+	{"canpush", luapacket_canpush},
 	{"reset", luapacket_reset},
 	{"getlen", luapacket_getlen},
 	{"gettype", luapacket_gettype},

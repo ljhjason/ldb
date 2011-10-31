@@ -308,6 +308,7 @@ local function sendlist_source()
 		num = 1
 	end
 	local msg = packet.anyfor_ldb()
+	packet.settype(msg, 0)
 	packet.pushint16(msg, num)
 	for k, v in pairs(retlines) do
 		packet.pushstring(msg, v)
@@ -318,6 +319,7 @@ end
 --发送调用栈信息
 local function send_tracebackinfo()
 	local msg = packet.anyfor_ldb()
+	packet.settype(msg, 0)
 	packet.pushint16(msg, 1)
 	packet.pushstring(msg, debug.traceback("", 5))
 	sendmsg(msg)
@@ -327,6 +329,7 @@ end
 local function sendbreakpointlist()
 	local msg = packet.anyfor_ldb()
 	local num = 1
+	packet.settype(msg, 0)
 	packet.pushint16(msg, num)
 	if s_debugmgr.breaktable.num == 0 then
 		packet.pushstring(msg, "No breakpoints.")
@@ -353,7 +356,22 @@ end
 local s_num = 0
 local s_msg = nil
 --装入字符串
-local function pushstring(str)
+local function localpushstring(str)
+	local strlen = string.len(str)
+	if strlen >= 32760 then
+		assert(nil, debug.traceback("", 1))
+	end
+	if not packet.canpush(s_msg, strlen + 4) then
+		packet.settype(s_msg, 1)
+		packet.pushint16toindex(s_msg, 0, s_num)
+		sendmsg(s_msg)
+		
+		s_num = 0
+		packet.reset(s_msg)
+		packet.settype(s_msg, 0)
+		packet.pushint16(s_msg, s_num)
+	end
+	
 	packet.pushstring(s_msg, str)
 	s_num = s_num + 1
 end
@@ -378,14 +396,14 @@ local function debug_print_var(name, value, level, pnum)
 		end
 			
 		--打印表中所有数据
-		pushstring(string.format("%s%s = \n%s{", prefix, name, prefix))
+		localpushstring(string.format("%s%s = \n%s{", prefix, name, prefix))
 		pnum = pnum - 1
 		for k, v in pairs (value) do	
 			debug_print_var(k, v, level + 1, pnum)
 		end
-		pushstring(prefix .. "}")
+		localpushstring(prefix .. "}")
 	else
-		pushstring(str)
+		localpushstring(str)
 	end
 end
 
@@ -422,7 +440,7 @@ local function loop_print_var(var, value, pnum)
 					value = value[name]
 				end
 			else
-				pushstring(string.format("%s = %s    [type:%s]", var, tostring(value[name]), type(value[name])))
+				localpushstring(string.format("%s = %s    [type:%s]", var, tostring(value[name]), type(value[name])))
 				find = true
 				break
 			end
@@ -437,7 +455,7 @@ end
 local function debug_print_expr(var, pnum)
 
 	if not var then
-		pushstring(tostring(var).." is invalid.")
+		localpushstring(tostring(var).." is invalid.")
 		return
 	end
 	
@@ -446,7 +464,7 @@ local function debug_print_expr(var, pnum)
 
 	if var == "G" or (var == "_G" and pnum == 1) then
 		for i, v in pairs(_G) do
-			pushstring(tostring(i).."    "..tostring(v))
+			localpushstring(tostring(i).."    "..tostring(v))
 		end
 		return 
 	end
@@ -498,7 +516,7 @@ local function debug_print_expr(var, pnum)
 	end
 	
 	if not find then
-		pushstring('No symbol "'..tostring(var)..'" in current context.')
+		localpushstring('No symbol "'..tostring(var)..'" in current context.')
 	end
 end
 
@@ -564,11 +582,13 @@ local function execute_once(cmd)
 		local line = string.sub(arglist, rs + 1)
 		line = tonumber(line)
 		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, addbreakpoint(line, filename))
 		sendmsg(msg)
 	elseif c == "d" then
 		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, delbreakpoint(arglist))
 		sendmsg(msg)
@@ -576,11 +596,13 @@ local function execute_once(cmd)
 		sendbreakpointlist()
 	elseif c == "be" then
 		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, enablebreakpoint(arglist))
 		sendmsg(msg)
 	elseif c == "bd" then
 		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
 		packet.pushstring(msg, disablebreakpoint(arglist))
 		sendmsg(msg)
@@ -722,6 +744,7 @@ local function trace(event, line)
 		local filename = assert(string.sub(env.source, 2, #env.source))
 		local retlines, num = getfileline(filename, line, 1)
 		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
 		if touchbpstr then
 			num = num + 1
 		end
