@@ -311,7 +311,7 @@ local function sendlist_source()
 	packet.settype(msg, 0)
 	packet.pushint16(msg, num)
 	for k, v in pairs(retlines) do
-		packet.pushstring(msg, v)
+		packet.pushstring(msg, v .. '\n')
 	end
 	sendmsg(msg)
 end
@@ -321,7 +321,7 @@ local function send_tracebackinfo()
 	local msg = packet.anyfor_ldb()
 	packet.settype(msg, 0)
 	packet.pushint16(msg, 1)
-	packet.pushstring(msg, debug.traceback("", 5))
+	packet.pushstring(msg, debug.traceback("", 5) .. '\n')
 	sendmsg(msg)
 end
 
@@ -332,9 +332,9 @@ local function sendbreakpointlist()
 	packet.settype(msg, 0)
 	packet.pushint16(msg, num)
 	if s_debugmgr.breaktable.num == 0 then
-		packet.pushstring(msg, "No breakpoints.")
+		packet.pushstring(msg, "No breakpoints.\n")
 	else
-		packet.pushstring(msg, "Num     Enb   What")
+		packet.pushstring(msg, "Num     Enb   What\n")
 		local s = s_debugmgr.breaktable.tb
 		local state
 		for k, v in pairs(s) do
@@ -344,7 +344,7 @@ local function sendbreakpointlist()
 				else
 					state = "n"
 				end
-				packet.pushstring(msg, string.format("%-8d%-6s%s:%d", j.number, state, j.source, j.line))
+				packet.pushstring(msg, string.format("%-8d%-6s%s:%d", j.number, state, j.source, j.line) ..'\n')
 				num = num + 1
 			end
 		end
@@ -608,13 +608,13 @@ local function execute_once(cmd)
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
-		packet.pushstring(msg, addbreakpoint(line, filename))
+		packet.pushstring(msg, addbreakpoint(line, filename) ..'\n')
 		sendmsg(msg)
 	elseif c == "d" then
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
-		packet.pushstring(msg, delbreakpoint(arglist))
+		packet.pushstring(msg, delbreakpoint(arglist) ..'\n')
 		sendmsg(msg)
 	elseif c == "bl" then
 		sendbreakpointlist()
@@ -622,13 +622,13 @@ local function execute_once(cmd)
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
-		packet.pushstring(msg, enablebreakpoint(arglist))
+		packet.pushstring(msg, enablebreakpoint(arglist) .. '\n')
 		sendmsg(msg)
 	elseif c == "bd" then
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)
 		packet.pushint16(msg, 1)
-		packet.pushstring(msg, disablebreakpoint(arglist))
+		packet.pushstring(msg, disablebreakpoint(arglist) .. '\n')
 		sendmsg(msg)
 	elseif c == "bt" then
 		send_tracebackinfo()
@@ -774,10 +774,10 @@ local function trace(event, line)
 		end
 		packet.pushint16(msg, num)
 		if touchbpstr then
-			packet.pushstring(msg, touchbpstr)
+			packet.pushstring(msg, touchbpstr .. '\n')
 		end
 		for k, v in pairs(retlines) do
-			packet.pushstring(msg, v)
+			packet.pushstring(msg, v .. '\n')
 		end
 		sendmsg(msg)
 
