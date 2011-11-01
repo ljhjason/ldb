@@ -179,13 +179,6 @@ static int task_func (void *argv)
 		if (socketer_isclose(sock))
 			continue;
 
-		/* error event. */
-		if (ev->events &EPOLLHUP || ev->events & EPOLLERR)
-		{
-			socketer_close(sock);
-			continue;
-		}
-
 		/* can read event. */
 		if (ev->events &EPOLLIN)
 		{
@@ -196,6 +189,13 @@ static int task_func (void *argv)
 		if (ev->events &EPOLLOUT)
 		{
 			socketer_on_send(sock, 0);
+		}
+
+		/* error event. */
+		if (ev->events &EPOLLHUP || ev->events & EPOLLERR)
+		{
+			socketer_close(sock);
+			continue;
 		}
 	}
 }
