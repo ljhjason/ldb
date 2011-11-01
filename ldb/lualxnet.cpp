@@ -108,7 +108,7 @@ static int lua_hasstr (lua_State *L)
 {
 	const char *src = luaL_checkstring(L, 1);
 	const char *path = luaL_checkstring(L, 2);
-	char *res = strstr(src, path);
+	char *res = (char *)strstr(src, path);
 	if (!res)
 		lua_pushboolean(L, 0);
 	else
@@ -728,7 +728,7 @@ static int luapacket_pushfixedstringtoindex (lua_State *L)
 	luaL_argcheck(L, needwrite <= 512, 4, "pushfixedstringtoindex, fixed length need less than or equal to 512");
 
 	size_t strsize = strlen(str);
-	if (strsize > needwrite)
+	if (strsize > (size_t )needwrite)
 		strsize = needwrite;
 
 	int16 secondpush = needwrite - (int16)strsize;
