@@ -33,6 +33,7 @@ extern "C"
 #include <limits.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "crosslib.h"
 #include "log.h"
@@ -103,6 +104,17 @@ static const struct luaL_reg class_lxnet_function[] = {
 	{0, 0}
 };
 
+static int lua_hasstr (lua_State *L)
+{
+	const char *src = luaL_checkstring(L, 1);
+	const char *path = luaL_checkstring(L, 2);
+	char *res = strstr(src, path);
+	if (!res)
+		lua_pushboolean(L, 0);
+	else
+		lua_pushboolean(L, 1);
+	return 1;
+}
 
 static int lua_create_guid (lua_State *L)
 {
@@ -226,6 +238,7 @@ static int lua_parseint64 (lua_State *L)
 
 static const struct luaL_reg g_function[] = {
 	{"create_guid", lua_create_guid},
+	{"hasstr", lua_hasstr},
 	{"rand", lua_krand},
 	{"delay", lua_delay},
 	{"getmillisecond", lua_get_millisecond},
