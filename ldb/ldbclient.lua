@@ -13,7 +13,8 @@ local s_netmgr = {ip = "", port = 0, con = nil}
 --管理调试部分
 local s_debugmgr = {
 	currentstate = "unknow",	--状态： 等待调试者输入命令: waitinput   等待被调试者回馈: waitrecv
-	lastcmd = ""				--上一次调试命令
+	lastcmd = "",				--上一次调试命令
+	filelog = nil,				--日志对象，若非空，则写日志；否则不写
 }
 
 local function inputcommand()
@@ -38,7 +39,19 @@ local function print_help()
 	print("bt                           print traceback")
 	print("l                            list source code")
 	print("q                            quit debug")
+	print("printtree                    print info tree format")
+	print("printtable                   print info table format")
+	print("openlog                      write debug all info file log")
+	print("closelog                     not write debug all info file log")
 end
+
+--输出并写日志
+local function printandtrywritelog(str)
+	if s_debugmgr.filelog then
+		s_debugmgr.filelog:write(str)
+	end
+end
+
 
 --发送命令
 local function sendcommand(cmd)
@@ -180,6 +193,10 @@ local function check_command(c, arglist)
 		return true
 	elseif c == "l" then
 		return true
+	elseif c == "printtree" then
+		return true
+	elseif c == "printtable" then
+		return true
 	end
 	return nil
 end
@@ -199,6 +216,7 @@ local function parserecvmsg(msg)
 			resstr = string.sub(resstr, 2, #resstr)
 		end
 		io.write(resstr)
+		printandtrywritelog(resstr)
 		resnum = resnum - 1
 	end
 end
@@ -226,6 +244,17 @@ local function execute_command(cmd)
 
 	if c == "help" or c == "h" then
 		print_help()
+	elseif c == "openlog" then
+		if not s_debugmgr.filelog then
+			s_debugmgr.filelog = io.open("ldb_log.log", "a")
+		end
+		print("Now is writing log.")
+	elseif c == "closelog" then
+		if s_debugmgr.filelog then
+			s_debugmgr.filelog:close()
+			s_debugmgr.filelog = nil
+		end
+		print("Now I didn't write log.")
 	elseif c == "quit" or c == "q" then
 		return false
 	else
@@ -234,6 +263,7 @@ local function execute_command(cmd)
 		if rest == true then
 			--发送命令
 			sendcommand(sendcmd)
+			printandtrywritelog(sendcmd..'\n')
 
 			--等待回馈
 			s_debugmgr.currentstate = "waitrecv"
@@ -334,4 +364,7 @@ s_netmgr.ip = "127.0.0.1"
 s_netmgr.port = 0xdeb
 inputipport()
 start()
+if s_debugmgr.filelog then
+	s_debugmgr.filelog:close()
+end
 os.execute("pause")

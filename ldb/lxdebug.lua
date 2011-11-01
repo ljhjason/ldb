@@ -13,12 +13,23 @@ local _G = _G
 local pairs = pairs
 local assert = assert
 local type = type
+local next = next
 local tostring = tostring
 local tonumber = tonumber
-local string = string
+local slen = string.len
+local sformat = string.format
+local ssub = string.sub
+local sfind = string.find
 local table = table
+local tinsert = table.insert
+local tconcat = table.concat
+local srep = string.rep
 local io = io
-local debug = debug
+local dtraceback = debug.traceback
+local dsethook = debug.sethook
+local dgethook = debug.gethook
+local dgetinfo = debug.getinfo
+local dgetlocal = debug.getlocal
 
 local lxnet = lxnet
 local socketer = socketer
@@ -28,7 +39,10 @@ local delay = delay
 local getfilefullname = getfilefullname
 
 --记录下本文件的文件名，防止调试本文件
-local s_thisfilename = debug.getinfo(1, "S").source
+local s_thisfilename = dgetinfo(1, "S").source
+
+--使用树形或者大括号的方式进行输出；默认大括号方式
+local s_usedtree = false
 
 --管理网络部分
 local s_netmgr = {
@@ -252,7 +266,7 @@ local function get_functionframe_deep()
 	local level = 1
 	local info
 	while true do
-		info = debug.getinfo(level, "S")
+		info = dgetinfo(level, "S")
 		if not info then
 			return level
 		end
@@ -262,19 +276,24 @@ end
 
 --获取指定文件从某行开始，获取指定行数
 local function getfileline (filename, beginline, linecount)
-	local f = assert(io.open(filename, "r"), "open ".. filename.." failed!")
-	beginline = (beginline >= 1 and beginline) or 1
-	linecount = (linecount >= 1 and linecount) or 1
-
 	local linenum = 0
 	local count = 0
 	local retlines = {}
 	local srcline
+	local f = io.open(filename, "r")
+	if not f then
+		tinsert(retlines, "open ".. filename.." failed!")
+		linenum = 1
+		return retlines, linenum
+	end
+	beginline = (beginline >= 1 and beginline) or 1
+	linecount = (linecount >= 1 and linecount) or 1
+
 	for line in f:lines() do
 		count = count + 1
 		if count >= beginline and count < (beginline + linecount) then
-			srcline = string.format("%-6d %s", count, line)
-			table.insert(retlines, srcline)
+			srcline = sformat("%-6d %s", count, line)
+			tinsert(retlines, srcline)
 			linenum = linenum + 1
 		end
 	end
@@ -284,7 +303,7 @@ end
 
 --发送当前断点或开始位置的源代码列表
 local function sendlist_source()
-	local env = debug.getinfo(5)
+	local env = dgetinfo(5)
 	local begin = 1
 	if env.currentline > 5 then
 		begin = env.currentline - 5
@@ -296,7 +315,7 @@ local function sendlist_source()
 	else
 		s_debugmgr.lastnum = begin
 	end
-	local filename = assert(string.sub(env.source, 2, #env.source))
+	local filename = ssub(env.source, 2, #env.source)
 	local retlines, num = getfileline(filename, begin, 10)
 
 	--不论上次是否为l命令，都变更下下次开始位置。
@@ -304,7 +323,7 @@ local function sendlist_source()
 
 	if num == 0 then
 		local src = "Line number "..begin.." out of range; "..filename.." has "..(begin - 1).." lines."
-		table.insert(retlines, src)
+		tinsert(retlines, src)
 		num = 1
 	end
 	local msg = packet.anyfor_ldb()
@@ -321,7 +340,7 @@ local function send_tracebackinfo()
 	local msg = packet.anyfor_ldb()
 	packet.settype(msg, 0)
 	packet.pushint16(msg, 1)
-	packet.pushstring(msg, debug.traceback("", 5) .. '\n')
+	packet.pushstring(msg, dtraceback("", 5) .. '\n')
 	sendmsg(msg)
 end
 
@@ -344,7 +363,7 @@ local function sendbreakpointlist()
 				else
 					state = "n"
 				end
-				packet.pushstring(msg, string.format("%-8d%-6s%s:%d", j.number, state, j.source, j.line) ..'\n')
+				packet.pushstring(msg, sformat("%-8d%-6s%s:%d", j.number, state, j.source, j.line) ..'\n')
 				num = num + 1
 			end
 		end
@@ -358,7 +377,7 @@ local s_msg = nil
 
 --真实的装入
 local function realpushstring(str)
-	local strlen = string.len(str)
+	local strlen = slen(str)
 	if not packet.canpush(s_msg, strlen + 4) then
 		packet.settype(s_msg, 1)
 		packet.pushint16toindex(s_msg, 0, s_num)
@@ -377,7 +396,7 @@ end
 --装入字符串
 local function localpushstring(str)
 	str = str .. '\n'
-	local strlen = string.len(str)
+	local strlen = slen(str)
 	local delay = 32750
 	if strlen > delay then
 		--看需要分拆成几段
@@ -385,7 +404,7 @@ local function localpushstring(str)
 		local endidx = delay
 		local second
 		while true do
-			second = string.sub(str, begin, endidx)
+			second = ssub(str, begin, endidx)
 			realpushstring(second)
 			if endidx + delay >= strlen then
 				break
@@ -394,36 +413,32 @@ local function localpushstring(str)
 			endidx = endidx + delay
 		end
 
-		str = string.sub(str, endidx + 1)
+		str = ssub(str, endidx + 1)
 	end
 	realpushstring(str)
 end
 
+--表格型输出表
 local deep_table = {}
-local function debug_print_var(name, value, level, pnum)
-	local prefix = string.rep("    ", level)
-	local str = string.format("%s%s = %s    [type:%s]", prefix, name, tostring(value), type(value))
+local function debug_print_var(name, value, level, pnum, fullname)
+	local prefix = srep("    ", level)
+	local str = sformat("%s%s = %s    [type:%s]", prefix, name, tostring(value), type(value))
 
 	if type(value) == "table" and pnum ~= 0 then
 		
 		--加到临时表中,以免表出现循环引用时,打印也产生死循环
-		if not deep_table[name] then
-			deep_table[name] = {}
+		if not deep_table[value] then
+			deep_table[value] = " = {" ..fullname .. "} [type:reference]"
 		else
-			for i, iv in pairs(deep_table[name]) do
-				if iv == value then
-					return
-				end
-			end
-			
-			table.insert(deep_table[name],value)
+			localpushstring(prefix..''..name..deep_table[value])
+			return
 		end
 			
 		--打印表中所有数据
-		localpushstring(string.format("%s%s = \n%s{", prefix, name, prefix))
+		localpushstring(sformat("%s%s = \n%s{", prefix, name, prefix))
 		pnum = pnum - 1
 		for k, v in pairs (value) do	
-			debug_print_var(k, v, level + 1, pnum)
+			debug_print_var(k, v, level + 1, pnum, fullname.."."..k)
 		end
 		localpushstring(prefix .. "}")
 	else
@@ -431,53 +446,89 @@ local function debug_print_var(name, value, level, pnum)
 	end
 end
 
+--树形输出表
+local function print_r(name, root, flag)
+	local cache = {  [root] = name }
+	local function _dump(t,space,name)
+		local temp = {}
+		for k,v in pairs(t) do
+			local key = tostring(k)
+			if cache[v] then
+				tinsert(temp,"+" .. key .. " {" .. cache[v].."} [type:reference]")
+			elseif type(v) == "table" then
+				local new_key = name .. "." .. key
+				cache[v] = new_key
+				if flag ~= 1 then
+					tinsert(temp,"+" .. key .. _dump(v,space .. (next(t,k) and "|" or " " ).. srep(" ",#key),new_key))
+				else
+					tinsert(temp,"+" .. key .. " = " .. tostring(v).. " [type:".. type(v).."]")
+				end
+			else
+				tinsert(temp,"+" .. key .. " = " .. tostring(v).. " [type:".. type(v).."]")
+			end
+		end
+		return tconcat(temp,"\n"..space)
+	end
+	localpushstring(name.._dump(root, srep(" ", #name),name))
+end
+
+--循环解析变量名，并找出要输出的变量
 local function loop_print_var(var, value, pnum)
 
 	local find 		= false
 	local begin_pos = 1
 	local end_pos	= 1	
-	local len 		= string.len(var)
+	local len 		= slen(var)
 
 	local name
+	local dep_num = 0
 	while end_pos < len do
 	
-		begin_pos, end_pos = string.find(var,"[_%w][_%w]*",end_pos)
-		
+		begin_pos, end_pos = sfind(var,"[_%w][_%w]*",end_pos)
+	
 		if not begin_pos then
 			break
 		end
 	
-		name = string.sub(var,begin_pos, end_pos)
+		name = ssub(var,begin_pos, end_pos)
 		end_pos = end_pos + 1
 		
 		--如果第一个字符为数字，则变为整数，而不是字符串
-		if string.find(name, "%d") == 1 then
+		if sfind(name, "%d") == 1 then
 			name = tonumber(name)
 		end
-		if value[name] then
+		if not value[name] then
+			if dep_num == 1 then
+				return false
+			end
+		else
 			if type(value[name]) == "table" then
 				if end_pos >= len then
-					debug_print_var(var, value[name], 0, pnum)
+					if s_usedtree then
+						print_r(var, value[name], pnum)
+					else
+						debug_print_var(var, value[name], 0, pnum, var)
+					end
 					find = true
 					break						
 				else
 					value = value[name]
 				end
 			else
-				localpushstring(string.format("%s = %s    [type:%s]", var, tostring(value[name]), type(value[name])))
+				localpushstring(sformat("%s = %s    [type:%s]", var, tostring(value[name]), type(value[name])))
 				find = true
 				break
 			end
 		end
-		
+	
+		dep_num = dep_num + 1
 	end
 	
 	return find
 end
 
 --打印变量的值
-local function debug_print_expr(var, pnum)
-
+local function debug_print_expr(var, pnum, depnum)
 	if not var then
 		localpushstring(tostring(var).." is invalid.")
 		return
@@ -495,9 +546,9 @@ local function debug_print_expr(var, pnum)
 	
 	local find  = false	
 	
-	if string.find(var,"[_%a][%.%[][_%w]*") then --多个.或[]名称修饰
+	if sfind(var,"[_%a][%.%[][_%w]*") then --多个.或[]名称修饰
 		--在全局以及局部环境中找
-		local first_name = string.sub(var,string.find(var,"[_%a][_%w]*"))
+		local first_name = ssub(var, sfind(var,"[_%a][_%w]*"))
 		if first_name == "_G" then
 			find = loop_print_var(var,_G, pnum)
 		end
@@ -505,7 +556,7 @@ local function debug_print_expr(var, pnum)
 			local index = 1
 			local name, value
 			while true do
-				name, value = debug.getlocal(6, index)
+				name, value = dgetlocal(depnum, index)
 				if not name then break end
 				index = index + 1
 
@@ -519,12 +570,19 @@ local function debug_print_expr(var, pnum)
 		local index = 1
 		local name, value
 		while true do
-			name, value = debug.getlocal(6, index)
-			if not name then break end
+			name, value = dgetlocal(depnum, index)
+			if not name then 
+				break 
+			end
 			index = index + 1
 
 			if name == var then
-				debug_print_var(var, value, 0, pnum)
+				if s_usedtree then
+					print_r(var, value, pnum)
+				else
+					debug_print_var(var, value, 0, pnum, var)
+				end
+				
 				find = true
 				return
 			end
@@ -532,7 +590,11 @@ local function debug_print_expr(var, pnum)
 
 		--找全局变量
 		if _G[var] ~= nil then
-			debug_print_var(var, _G[var], 0, pnum)
+			if s_usedtree then
+				print_r(var, _G[var], pnum)
+			else
+				debug_print_var(var, _G[var], 0, pnum, var)
+			end
 			find = true
 			return
 		end	
@@ -548,8 +610,9 @@ end
 local function sendvariablevalue(var, pnum)
 	s_num = 0
 	s_msg = packet.anyfor_ldb()
+	packet.settype(s_msg, 0)
 	packet.pushint16(s_msg, s_num)
-	debug_print_expr(var, pnum)
+	debug_print_expr(var, pnum, 6)
 	packet.pushint16toindex(s_msg, 0, s_num)
 	sendmsg(s_msg)
 	s_msg = nil
@@ -558,18 +621,18 @@ end
 
 --执行一次命令
 local function execute_once(cmd)
-	local env = debug.getinfo(4)
+	local env = dgetinfo(4)
 	local c = cmd
 	local arglist
-	local rs = string.find(cmd, " ")
+	local rs = sfind(cmd, " ")
 	if rs ~= nil then
-		c = string.sub(cmd, 1, rs - 1)
-		arglist = string.sub(cmd, rs + 1)
+		c = ssub(cmd, 1, rs - 1)
+		arglist = ssub(cmd, rs + 1)
 	end
 	if c == "c" then
 		s_debugmgr.trace = false
 		--尝试转入高速模式。函数niltrace会判别当前运行模式
-		if  debug.gethook() then
+		if  dgethook() then
 			if (s_debugmgr.breaktable.num == 0) or (s_debugmgr.breaktable.validnum == 0) then
 				niltrace()
 			end
@@ -577,7 +640,7 @@ local function execute_once(cmd)
 		return true
 	elseif c == "s" then
 		s_debugmgr.trace = true
-		if not debug.gethook() then
+		if not dgethook() then
 			checksethook()
 		end
 		return true
@@ -586,7 +649,7 @@ local function execute_once(cmd)
 		s_debugmgr.nextstep = true
 		s_debugmgr.current_func = env.func
 		s_debugmgr.trace_count = get_functionframe_deep() - 1
-		if not debug.gethook() then
+		if not dgethook() then
 			checksethook()
 		end
 		return true
@@ -600,10 +663,26 @@ local function execute_once(cmd)
 	elseif c == "seet" then
 		sendvariablevalue(arglist, 1)
 		return true
+	elseif c == "printtree" then
+		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
+		packet.pushint16(msg, 1)
+		packet.pushstring(msg, "Use tree structure output.\n")
+		sendmsg(msg)
+		s_usedtree = true
+		return true
+	elseif c == "printtable" then
+		local msg = packet.anyfor_ldb()
+		packet.settype(msg, 0)
+		packet.pushint16(msg, 1)
+		packet.pushstring(msg, "Use table structure output.\n")
+		sendmsg(msg)
+		s_usedtree = false
+		return true
 	elseif c == "b" then
-		local rs = string.find(arglist, ":")
-		local filename = string.sub(arglist, 1, rs - 1)
-		local line = string.sub(arglist, rs + 1)
+		local rs = sfind(arglist, ":")
+		local filename = ssub(arglist, 1, rs - 1)
+		local line = ssub(arglist, rs + 1)
 		line = tonumber(line)
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)
@@ -685,7 +764,7 @@ local function initnetwork()
 	assert(s_netmgr.listen, "create listener object failed!")
 	local res = listener.listen(s_netmgr.listen, s_netmgr.port, 1)
 	if not res then
-		log_error(string.format("[luafile: %s] [line: %d]: listen %d  failed!", debug.getinfo(1, "S").source, debug.getinfo(1, "l").currentline, s_netmgr.port))
+		log_error(sformat("[luafile: %s] [line: %d]: listen %d  failed!", dgetinfo(1, "S").source, dgetinfoo(1, "l").currentline, s_netmgr.port))
 		os.exit(1)
 	end
 	if res then
@@ -724,7 +803,7 @@ end
 
 --行事件的回调函数
 local function trace(event, line)
-	local env = debug.getinfo(2)
+	local env = dgetinfo(2)
 
 	--不能调试此文件
 	if s_thisfilename == env.source then
@@ -750,7 +829,7 @@ local function trace(event, line)
 
 	--断点处理
 	if not s_debugmgr.trace and s_debugmgr.breaktable.tb[line] then
-		local source = string.sub(env.source, 2, #env.source)
+		local source = ssub(env.source, 2, #env.source)
 		source = getfilefullname(source)
 		local bp = s_debugmgr.breaktable.tb[line][source]
 		if bp and bp.active then
@@ -765,7 +844,7 @@ local function trace(event, line)
 	--为单步调试时 s
 	if s_debugmgr.trace then
 		--回馈这行的信息
-		local filename = assert(string.sub(env.source, 2, #env.source))
+		local filename = ssub(env.source, 2, #env.source)
 		local retlines, num = getfileline(filename, line, 1)
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)
@@ -795,7 +874,7 @@ local function trace(event, line)
 			if not s_debugmgr.nextstep then
 				if s_debugmgr.runmodule == "useframefunc" then
 				--为useframefunc模式，则无断点的话就去掉行hook
-					if  debug.gethook() then
+					if  dgethook() then
 						if (s_debugmgr.breaktable.num == 0) or (s_debugmgr.breaktable.validnum == 0) then
 							niltrace()
 						end
@@ -808,8 +887,8 @@ end
 
 --当收到s或者n命令时，看看hook函数是否存在，若不存在则设置
 function checksethook()
-	if not debug.gethook() then
-		debug.sethook(trace, "l")
+	if not dgethook() then
+		dsethook(trace, "l")
 	end
 end
 
@@ -820,14 +899,14 @@ function niltrace()
 		return
 	end
 	if s_debugmgr.runmodule == "useframefunc" then
-		debug.sethook()
+		dsethook()
 	end
 end
 
 --当断点数量或者被激活的断点数量从0变更为大于0时。若没设置行事件，则设置
 function userlinetrace()
-	if not debug.gethook() then
-		debug.sethook(trace, "l")
+	if not dgethook() then
+		dsethook(trace, "l")
 	end
 end
 
@@ -854,7 +933,7 @@ function startdebug_use_loopfunc(port)
 	--记录下当前使用模式为使用帧函数
 	s_debugmgr.runmodule = "useframefunc"
 
-	debug.sethook(trace, "l")
+	dsethook(trace, "l")
 end
 
 --每帧调用下此函数（此函数内所有操作都是非阻塞的）
@@ -901,7 +980,7 @@ function stopdebug()
 		socketer.release(s_netmgr.client)
 		s_netmgr.client = nil
 	end
-	debug.sethook()
+	dsethook()
 end
 
 --调试纯Lua脚本时调用
