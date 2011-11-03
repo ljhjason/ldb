@@ -530,6 +530,12 @@ static MessagePack *get_messagepack (lua_State *L, int idx)
 	return pack;
 }
 
+static int luapacket_getheadlen (lua_State *L)
+{
+	lua_pushinteger(L, (int)sizeof(Msg));
+	return 1;
+}
+
 static int luapacket_canpush (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
@@ -544,6 +550,24 @@ static int luapacket_reset (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
 	pack->ResetMsgLength();
+	return 0;
+}
+
+static int luapacket_setindex (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int idx = (int)luaL_checkinteger(L, 2);
+	luaL_argcheck(L, idx >= 0 && (idx < MessagePack::e_thismessage_max_size), 2, "msg index need greater than zero, less than MessagePack::e_thismessage_max_size");
+	pack->SetIndex(idx);
+	return 0;
+}
+
+static int luapacket_setlen (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	int len = (int)luaL_checkinteger(L, 2);
+	luaL_argcheck(L, len >= (int)sizeof(Msg) && (len <= 1024*128 + (int)sizeof(Msg)), 2, "msg new length less than min length or greater than 1024*128 + (int)sizeof(Msg)");
+	pack->SetLength(len);
 	return 0;
 }
 
@@ -761,8 +785,11 @@ static const struct luaL_reg class_packet_function[] = {
 	{"anyfirst", luapacket_anyfirst},
 	{"anysecond", luapacket_anysecond},
 
+	{"getheadlen", luapacket_getheadlen},
 	{"canpush", luapacket_canpush},
 	{"reset", luapacket_reset},
+	{"setindex", luapacket_setindex},
+	{"setlen", luapacket_setlen},
 	{"getlen", luapacket_getlen},
 	{"gettype", luapacket_gettype},
 	{"settype", luapacket_settype},

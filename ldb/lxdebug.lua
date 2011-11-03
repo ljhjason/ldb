@@ -629,6 +629,9 @@ local function execute_once(cmd)
 		c = ssub(cmd, 1, rs - 1)
 		arglist = ssub(cmd, rs + 1)
 	end
+	if deep_table then
+		deep_table = nil
+	end
 	if c == "c" then
 		s_debugmgr.trace = false
 		--尝试转入高速模式。函数niltrace会判别当前运行模式
@@ -981,6 +984,7 @@ function stopdebug()
 		s_netmgr.client = nil
 	end
 	dsethook()
+	deep_table = nil
 end
 
 --调试纯Lua脚本时调用

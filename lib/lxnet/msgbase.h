@@ -49,6 +49,17 @@ struct MessagePack:public Msg
 		m_maxindex = GetLength() - (int)sizeof(Msg);
 	}
 
+	//设置当前位置索引
+	void SetIndex(size_t idx)
+	{
+		if (idx >= e_thismessage_max_size)
+			idx = e_thismessage_max_size - 1;
+		if (idx < 0)
+			idx = 0;
+		m_index = idx;
+		m_maxindex = GetLength() - (int)sizeof(Msg);
+	}
+
 	void ResetMsgLength()	//重置包大小以及索引
 	{
 		Begin();
