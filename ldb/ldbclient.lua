@@ -49,6 +49,7 @@ end
 local function printandtrywritelog(str)
 	if s_debugmgr.filelog then
 		s_debugmgr.filelog:write(str)
+		s_debugmgr.filelog:flush()
 	end
 end
 
@@ -263,7 +264,7 @@ local function execute_command(cmd)
 		if rest == true then
 			--发送命令
 			sendcommand(sendcmd)
-			printandtrywritelog(sendcmd..'\n')
+			printandtrywritelog('\n[commond] '..sendcmd..'\n')
 
 			--等待回馈
 			s_debugmgr.currentstate = "waitrecv"
