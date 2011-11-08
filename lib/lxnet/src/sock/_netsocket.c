@@ -462,12 +462,11 @@ void socketer_on_recv (struct socketer *self)
 		assert(writebuf.len >= 0);
 		if (writebuf.len <= 0)
 		{
-			atom_dec(&self->recvlock);
-
 			if (!buf_recv_end_do(self->recvbuf))
 			{
 				/* uncompress error, close socket. */
 				socketer_close(self);
+				atom_dec(&self->recvlock);
 				return;
 			}
 
@@ -475,6 +474,8 @@ void socketer_on_recv (struct socketer *self)
 			/* remove recv event. */
 			socket_remove_recvevent(self);
 #endif
+
+			atom_dec(&self->recvlock);
 			return;
 		}
 
@@ -489,16 +490,16 @@ void socketer_on_recv (struct socketer *self)
 			if (!buf_recv_end_do(self->recvbuf))
 			{
 				/* uncompress error, close socket. */
-				atom_dec(&self->recvlock);
 				socketer_close(self);
+				atom_dec(&self->recvlock);
 				return;
 			}
 
 			if ((!SOCKET_ERR_RW_RETRIABLE(NET_GetLastError())) || (res == 0))
 			{
 				/* error, close socket. */
-				atom_dec(&self->recvlock);
 				socketer_close(self);
+				atom_dec(&self->recvlock);
 				debuglog("recv func, socket is error!, so close it!\n");
 			}
 			else
@@ -540,12 +541,13 @@ void socketer_on_send (struct socketer *self, int len)
 		assert(readbuf.len >= 0);
 		if (readbuf.len <= 0)
 		{
-			atom_dec(&self->sendlock);
 
 #ifndef WIN32
 			/* remove send event. */
 			socket_remove_sendevent(self);
 #endif
+
+			atom_dec(&self->sendlock);
 			return;
 		}
 
@@ -560,8 +562,8 @@ void socketer_on_send (struct socketer *self, int len)
 			if (!SOCKET_ERR_RW_RETRIABLE(NET_GetLastError()))
 			{
 				/* error, close socket. */
-				atom_dec(&self->sendlock);
 				socketer_close(self);
+				atom_dec(&self->sendlock);
 				debuglog("send func, socket is error!, so close it!\n");
 			}
 			else

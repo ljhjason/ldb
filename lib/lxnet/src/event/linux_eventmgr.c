@@ -87,8 +87,8 @@ void socket_setup_recvevent (struct socketer *self)
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
 		/*log_error("epoll, setup recv event to epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
-		atom_dec(&self->recvlock);
 		socketer_close(self);
+		atom_dec(&self->recvlock);
 	}
 	debuglog("setup recv event to eventmgr.");
 }
@@ -124,8 +124,8 @@ void socket_setup_sendevent (struct socketer *self)
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
 		/*log_error("epoll, setup send event to epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
-		atom_dec(&self->sendlock);
 		socketer_close(self);
+		atom_dec(&self->sendlock);
 	}
 	debuglog("setup send event to eventmgr.");
 }
