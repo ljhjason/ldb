@@ -70,6 +70,7 @@ void socket_removefrom_eventmgr (struct socketer *self)
 	{
 		/*log_error("epoll, not remove fd %d from epoll set, error!, errno:%d", ev.data.fd, NET_GetLastError());*/
 	}
+	
 	debuglog("remove all event from eventmgr.");
 }
 
@@ -176,26 +177,25 @@ static int task_func (void *argv)
 			return 0;
 		assert(ev->data.ptr != NULL);
 		sock = (struct socketer *)ev->data.ptr;
-		if (socketer_isclose(sock))
-			continue;
-
-		/* can read event. */
-		if (ev->events &EPOLLIN)
-		{
-			socketer_on_recv(sock);
-		}
-
-		/* can write event. */
-		if (ev->events &EPOLLOUT)
-		{
-			socketer_on_send(sock, 0);
-		}
 
 		/* error event. */
-		if (ev->events &EPOLLHUP || ev->events & EPOLLERR)
+		if (ev->events & (EPOLLHUP | EPOLLERR))
 		{
 			socketer_close(sock);
-			continue;
+		}
+		else
+		{
+			/* can read event. */
+			if (ev->events &EPOLLIN)
+			{
+				socketer_on_recv(sock);
+			}
+
+			/* can write event. */
+			if (ev->events &EPOLLOUT)
+			{
+				socketer_on_send(sock, 0);
+			}
 		}
 	}
 }

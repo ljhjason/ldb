@@ -214,6 +214,12 @@ void socketer_release (struct socketer *self)
 	if (self->deleted)
 		return;
 	socketer_close(self);
+
+#ifndef WIN32
+	atom_compare_and_swap(&self->recvlock, 1, 0);
+	atom_compare_and_swap(&self->sendlock, 1, 0);
+#endif
+
 	socketmgr_add_to_waite(self);
 }
 
