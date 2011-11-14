@@ -41,6 +41,9 @@ local getfilefullname = getfilefullname
 --记录下本文件的文件名，防止调试本文件
 local s_thisfilename = dgetinfo(1, "S").source
 
+--当前目录
+local s_currentpath = getcurrentpath()
+
 --使用树形或者大括号的方式进行输出；默认大括号方式
 local s_usedtree = false
 
@@ -68,26 +71,63 @@ local s_debugmgr = {
 	breaktable = {					--断点集
 		num = 0,					--断点总数
 		validnum = 0,				--有效断点数目
-		tb = {}						--断点表[line][source]
-	}	
+		tb = {},					--断点表[line][source]
+		blist = {},					--断点表[number] 根据断点id查找断点
+		linehook = false,			--每行hook标记
+	}
 }
 
-local function realaddbreakpoint(line, source)
-	if s_debugmgr.breaktable.tb[line] and s_debugmgr.breaktable.tb[line][source] then
-		local tl = s_debugmgr.breaktable.tb[line][source]
-		if tl.active then
-			return "Note: breakpoint "..tostring(tl.number).." already at file: "..source..", line "..tostring(line).."."
-		else
-			s_debugmgr.breaktable.validnum = s_debugmgr.breaktable.validnum + 1
-			tl.active = true
-			return "Enable breakpoint "..tostring(tl.number).."."
+--获取处理后的仅仅是为了比较用的文件名
+local function getcmpsource(source)
+	local substr = string.sub(source, #s_currentpath + 2)
+	if iswindows() then
+		substr = string.gsub(substr, "\\", "/")
+		return '@' .. source, '@.\\' .. substr, '@' .. substr
+	else
+		return '@' .. source, '@./' .. substr, '@' .. substr
+	end
+end
+
+--清空所有断点
+local function clearallbreakpoint()
+	s_debugmgr.breaktable.num = 0
+	s_debugmgr.breaktable.validnum = 0
+	s_debugmgr.breaktable.tb = {}
+	s_debugmgr.breaktable.blist = {}
+	s_debugmgr.breaktable.linehook = false
+end
+
+--真实的增加断点
+local function realaddbreakpoint(line, source, cmp1, cmp2, cmp3)
+	if s_debugmgr.breaktable.tb[line] then
+		local tl1 = s_debugmgr.breaktable.tb[line][cmp1]
+		local tl2 = s_debugmgr.breaktable.tb[line][cmp2]
+		local tl3 = s_debugmgr.breaktable.tb[line][cmp3]
+		if tl1 or tl2 or tl3 then
+			assert(tl1 == tl2 and tl1 == tl3)
+			if tl1.active then
+				return "Note: breakpoint "..tostring(tl1.number).." already at file: "..source..", line "..tostring(line).."."
+			else
+				local oldvalidnum = s_debugmgr.breaktable.validnum
+				s_debugmgr.breaktable.validnum = s_debugmgr.breaktable.validnum + 1
+				tl1.active = true
+				
+				--若激活的数目从0变为大于0，则尝试下变更模式
+				if oldvalidnum == 0 then
+					userlinetrace()
+				end
+				return "Enable breakpoint "..tostring(tl1.number).."."
+			end
 		end
 	end
 	local tbl = {}
-	tbl.source = source
-	tbl.line = line
-	tbl.active = true
-	tbl.number = s_debugmgr.num
+	tbl.source = source				--断点实际的文件、行
+	tbl.cmpsource1 = cmp1			--根据源文件路径1查找表
+	tbl.cmpsource2 = cmp2			--根据源文件路径2查找表
+	tbl.cmpsource3 = cmp3			--根据源文件路径3查找表
+	tbl.line = line					--断点所在行
+	tbl.active = true				--断点激活标记
+	tbl.number = s_debugmgr.num		--断点编号
 
 	if not s_debugmgr.breaktable.tb[line] then
 		s_debugmgr.breaktable.tb[line] = {}
@@ -95,7 +135,12 @@ local function realaddbreakpoint(line, source)
 
 	local oldvalidnum = s_debugmgr.breaktable.validnum
 
-	s_debugmgr.breaktable.tb[line][source] = tbl
+	s_debugmgr.breaktable.tb[line][cmp1] = tbl
+	s_debugmgr.breaktable.tb[line][cmp2] = tbl
+	s_debugmgr.breaktable.tb[line][cmp3] = tbl
+
+	s_debugmgr.breaktable.blist[tbl.number] = tbl
+
 	s_debugmgr.breaktable.num = s_debugmgr.breaktable.num + 1
 	s_debugmgr.breaktable.validnum = s_debugmgr.breaktable.validnum + 1
 
@@ -132,29 +177,20 @@ local function addbreakpoint(line, source)
 		return 'No line '..tostring(line)..' in file "'..source..'"'
 	end
 
-	return realaddbreakpoint(line, source)
+	local cmp1, cmp2, cmp3 = getcmpsource(source)
+	return realaddbreakpoint(line, source, cmp1, cmp2, cmp3)
 end
 
 --根据断点id查找断点
 local function findbreakpoint(bpnum)
-	local s1 = s_debugmgr.breaktable.tb
-	for k, v in pairs(s1) do
-		for i, j in pairs(v) do
-			if j.number == bpnum then
-				return j
-			end
-		end
-	end
-	return nil
+	return s_debugmgr.breaktable.blist[bpnum]
 end
 
 --删除断点
 local function delbreakpoint(bpnum)
 	if bpnum == "*" then
 		local oldnum = s_debugmgr.breaktable.num
-		s_debugmgr.breaktable.num = 0
-		s_debugmgr.breaktable.validnum = 0
-		s_debugmgr.breaktable.tb = {}
+		clearallbreakpoint()
 
 		if  oldnum ~= 0 then
 			niltrace()
@@ -165,7 +201,10 @@ local function delbreakpoint(bpnum)
 	if not bp then
 		return "No breakpoint number "..bpnum.."."
 	end
-	s_debugmgr.breaktable.tb[bp.line][bp.source] = nil
+	s_debugmgr.breaktable.tb[bp.line][bp.cmpsource1] = nil
+	s_debugmgr.breaktable.tb[bp.line][bp.cmpsource2] = nil
+	s_debugmgr.breaktable.tb[bp.line][bp.cmpsource3] = nil
+	s_debugmgr.breaktable.blist[bp.number] = nil
 
 	s_debugmgr.breaktable.num = s_debugmgr.breaktable.num - 1
 	if bp.active then
@@ -187,11 +226,9 @@ local function enablebreakpoint(bpnum)
 		local oldvalidnum = s_debugmgr.breaktable.validnum
 		s_debugmgr.breaktable.validnum = s_debugmgr.breaktable.num
 	
-		local s1 = s_debugmgr.breaktable.tb
+		local s1 = s_debugmgr.breaktable.blist
 		for k, v in pairs(s1) do
-			for i, j in pairs(v) do
-				j.active = true
-			end
+			v.active = true
 		end
 		--若激活的数目从0变为大于0，则尝试下变更模式
 		if oldvalidnum == 0 then
@@ -228,11 +265,9 @@ local function disablebreakpoint(bpnum)
 		local oldvalidnum = s_debugmgr.breaktable.validnum
 		s_debugmgr.breaktable.validnum = 0
 	
-		local s1 = s_debugmgr.breaktable.tb
+		local s1 = s_debugmgr.breaktable.blist
 		for k, v in pairs(s1) do
-			for i, j in pairs(v) do
-				j.active = false
-			end
+			v.active = false
 		end
 
 		if oldvalidnum > 0 then
@@ -354,18 +389,16 @@ local function sendbreakpointlist()
 		packet.pushstring(msg, "No breakpoints.\n")
 	else
 		packet.pushstring(msg, "Num     Enb   What\n")
-		local s = s_debugmgr.breaktable.tb
+		local s = s_debugmgr.breaktable.blist
 		local state
 		for k, v in pairs(s) do
-			for i, j in pairs(v) do
-				if j.active then
-					state = "y"
-				else
-					state = "n"
-				end
-				packet.pushstring(msg, sformat("%-8d%-6s%s:%d", j.number, state, j.source, j.line) ..'\n')
-				num = num + 1
+			if v.active then
+				state = "y"
+			else
+				state = "n"
 			end
+			packet.pushstring(msg, sformat("%-8d%-6s%s:%d", v.number, state, v.source, v.line) ..'\n')
+			num = num + 1
 		end
 	end
 	packet.pushint16toindex(msg, 0, num)
@@ -643,18 +676,14 @@ local function execute_once(cmd)
 		return true
 	elseif c == "s" then
 		s_debugmgr.trace = true
-		if not dgethook() then
-			checksethook()
-		end
+		userlinetrace()
 		return true
 	elseif c == "n" then
 		s_debugmgr.trace = false
 		s_debugmgr.nextstep = true
 		s_debugmgr.current_func = env.func
 		s_debugmgr.trace_count = get_functionframe_deep() - 1
-		if not dgethook() then
-			checksethook()
-		end
+		userlinetrace()
 		return true
 	elseif c == "p" then
 		sendvariablevalue(arglist, -1)
@@ -767,7 +796,7 @@ local function initnetwork()
 	assert(s_netmgr.listen, "create listener object failed!")
 	local res = listener.listen(s_netmgr.listen, s_netmgr.port, 1)
 	if not res then
-		log_error(sformat("[luafile: %s] [line: %d]: listen %d  failed!", dgetinfo(1, "S").source, dgetinfoo(1, "l").currentline, s_netmgr.port))
+		log_error(sformat("[luafile: %s] [line: %d]: listen %d  failed!", dgetinfo(1, "S").source, dgetinfo(1, "l").currentline, s_netmgr.port))
 		os.exit(1)
 	end
 	if res then
@@ -832,9 +861,7 @@ local function trace(event, line)
 
 	--断点处理
 	if not s_debugmgr.trace and s_debugmgr.breaktable.tb[line] then
-		local source = ssub(env.source, 2, #env.source)
-		source = getfilefullname(source)
-		local bp = s_debugmgr.breaktable.tb[line][source]
+		local bp = s_debugmgr.breaktable.tb[line][env.source]
 		if bp and bp.active then
 			s_debugmgr.nextstep = false
 			s_debugmgr.trace = true
@@ -875,23 +902,14 @@ local function trace(event, line)
 			end
 		else
 			if not s_debugmgr.nextstep then
-				if s_debugmgr.runmodule == "useframefunc" then
 				--为useframefunc模式，则无断点的话就去掉行hook
-					if  dgethook() then
-						if (s_debugmgr.breaktable.num == 0) or (s_debugmgr.breaktable.validnum == 0) then
-							niltrace()
-						end
+				if s_debugmgr.breaktable.linehook then
+					if (s_debugmgr.breaktable.num == 0) or (s_debugmgr.breaktable.validnum == 0) then
+						niltrace()
 					end
 				end
 			end
 		end
-	end
-end
-
---当收到s或者n命令时，看看hook函数是否存在，若不存在则设置
-function checksethook()
-	if not dgethook() then
-		dsethook(trace, "l")
 	end
 end
 
@@ -903,13 +921,16 @@ function niltrace()
 	end
 	if s_debugmgr.runmodule == "useframefunc" then
 		dsethook()
+		s_debugmgr.breaktable.linehook = false
 	end
 end
 
 --当断点数量或者被激活的断点数量从0变更为大于0时。若没设置行事件，则设置
+--或者当收到s、n命令时，设置
 function userlinetrace()
 	if not dgethook() then
 		dsethook(trace, "l")
+		s_debugmgr.breaktable.linehook = true
 	end
 end
 
@@ -937,6 +958,7 @@ function startdebug_use_loopfunc(port)
 	s_debugmgr.runmodule = "useframefunc"
 
 	dsethook(trace, "l")
+	s_debugmgr.breaktable.linehook = true
 end
 
 --每帧调用下此函数（此函数内所有操作都是非阻塞的）
@@ -975,9 +997,7 @@ end
 --当不允许宿主调试时时，调用此函数
 function stopdebug()
 	--释放网络以及调试相关数据
-	s_debugmgr.breaktable.num = 0
-	s_debugmgr.breaktable.validnum = 0
-	s_debugmgr.breaktable.tb = {}
+	clearallbreakpoint()
 
 	if s_netmgr.client then
 		socketer.release(s_netmgr.client)

@@ -178,6 +178,7 @@ static int lua_getfullname (lua_State *L)
 {
 	char buf[1024*2] = {0};
 	const char *name = luaL_checkstring(L, 1);
+
 #ifdef WIN32
 	GetFullPathName(name, sizeof(buf)-1, buf, NULL);
 #else
@@ -187,7 +188,34 @@ static int lua_getfullname (lua_State *L)
 	readlink(srcname, buf, sizeof(buf)-1);
 	close(fd);
 #endif
+
 	lua_pushstring(L, buf);
+	return 1;
+}
+
+static int lua_getcurrentpath (lua_State *L)
+{
+	char buf[1024*2] = {0};
+
+#ifdef WIN32
+	GetCurrentDirectory(sizeof(buf)-1, buf);
+#else
+	getcwd(buf, sizeof(buf)-1);
+#endif
+
+	lua_pushstring(L, buf);
+	return 1;
+}
+
+static int lua_iswindows (lua_State *L)
+{
+
+#ifdef WIN32
+	lua_pushboolean(L, 1);
+#else
+	lua_pushboolean(L, 0);
+#endif
+
 	return 1;
 }
 
@@ -243,6 +271,8 @@ static const struct luaL_reg g_function[] = {
 	{"delay", lua_delay},
 	{"getmillisecond", lua_get_millisecond},
 	{"getfilefullname", lua_getfullname},
+	{"getcurrentpath", lua_getcurrentpath},
+	{"iswindows", lua_iswindows},
 	{"log_setdirectory", lua_log_setdirectory},
 	{"log_writelog", lua_log_writelog},
 	{"log_error", lua_log_error},
