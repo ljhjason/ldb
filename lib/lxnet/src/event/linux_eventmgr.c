@@ -178,24 +178,22 @@ static int task_func (void *argv)
 		assert(ev->data.ptr != NULL);
 		sock = (struct socketer *)ev->data.ptr;
 
+		/* can read event. */
+		if (ev->events &EPOLLIN)
+		{
+			socketer_on_recv(sock);
+		}
+
+		/* can write event. */
+		if (ev->events &EPOLLOUT)
+		{
+			socketer_on_send(sock, 0);
+		}
+
 		/* error event. */
 		if (ev->events & (EPOLLHUP | EPOLLERR))
 		{
 			socketer_close(sock);
-		}
-		else
-		{
-			/* can read event. */
-			if (ev->events &EPOLLIN)
-			{
-				socketer_on_recv(sock);
-			}
-
-			/* can write event. */
-			if (ev->events &EPOLLOUT)
-			{
-				socketer_on_send(sock, 0);
-			}
 		}
 	}
 }

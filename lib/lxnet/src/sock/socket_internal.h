@@ -29,6 +29,7 @@ struct socketer
 	struct overlappedstruct recv_event;
 	struct overlappedstruct send_event;
 #else
+	bool alreadyresetlock;				/* for reset lock in linux */
 	int events;							/* for epoll event.*/
 #endif
 

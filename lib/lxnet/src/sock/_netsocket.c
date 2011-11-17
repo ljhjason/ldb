@@ -32,6 +32,11 @@
 enum e_control_value
 {
 	enum_list_run_delay = 300,
+
+#ifndef WIN32
+	enum_reset_lock_inlinuxtime = 3000,
+#endif
+
 	enum_list_close_delaytime = 15000,
 };
 
@@ -127,6 +132,7 @@ static bool socketer_init (struct socketer *self, bool bigbuf)
 	memset(&self->recv_event, 0, sizeof(self->recv_event));
 	memset(&self->send_event, 0, sizeof(self->send_event));
 #else
+	self->alreadyresetlock = false;
 	self->events = 0;
 #endif
 
@@ -151,6 +157,7 @@ static bool socketer_init (struct socketer *self, bool bigbuf)
 	self->connected = false;
 	return true;
 }
+
 static void socketer_addto_eventlist (struct socketer *self)
 {
 	if (atom_compare_and_swap(&self->already_event, 0, 1) == 0)	/* if 0, then set 1, and add to event manager. */
@@ -213,13 +220,8 @@ void socketer_release (struct socketer *self)
 	assert(!self->deleted);
 	if (self->deleted)
 		return;
+
 	socketer_close(self);
-
-#ifndef WIN32
-	atom_compare_and_swap(&self->recvlock, 1, 0);
-	atom_compare_and_swap(&self->sendlock, 1, 0);
-#endif
-
 	socketmgr_add_to_waite(self);
 }
 
@@ -619,6 +621,16 @@ void socketmgr_run ()
 			sock = s_mgr.head;
 			if (!sock)
 				return;
+
+#ifndef WIN32
+			if (current - sock->closetime >= enum_reset_lock_inlinuxtime && !sock->alreadyresetlock)
+			{
+				atom_compare_and_swap(&sock->recvlock, 1, 0);
+				atom_compare_and_swap(&sock->sendlock, 1, 0);
+				sock->alreadyresetlock = true;
+			}
+#endif
+
 			if (current - sock->closetime < enum_list_close_delaytime)
 				return;
 			resock = socketmgr_pop_front();
