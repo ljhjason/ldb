@@ -126,8 +126,27 @@ static void default_encrypt_func (void *logicdata, char *buf, int len)
 	}
 }
 
+static void socketer_initrecvbuf (struct socketer *self)
+{
+	if (!self->recvbuf)
+	{
+		self->recvbuf = buf_create(self->bigbuf);
+		buf_setdofunc(self->recvbuf, default_decrypt_func, NULL);
+	}
+}
+
+static void socketer_initsendbuf (struct socketer *self)
+{
+	if (!self->sendbuf)
+	{
+		self->sendbuf = buf_create(self->bigbuf);
+		buf_setdofunc(self->sendbuf, default_encrypt_func, NULL);
+	}
+}
+
 static bool socketer_init (struct socketer *self, bool bigbuf)
 {
+
 #ifdef WIN32
 	memset(&self->recv_event, 0, sizeof(self->recv_event));
 	memset(&self->send_event, 0, sizeof(self->send_event));
@@ -139,22 +158,15 @@ static bool socketer_init (struct socketer *self, bool bigbuf)
 	self->sockfd = NET_INVALID_SOCKET;
 	self->closetime = 0;
 	self->next = NULL;
-	self->recvbuf = buf_create(bigbuf);
-	self->sendbuf = buf_create(bigbuf);
-	if (!self->recvbuf || !self->sendbuf)
-	{
-		buf_release(self->recvbuf);
-		buf_release(self->sendbuf);
-		return false;
-	}
-	buf_setdofunc(self->recvbuf, default_decrypt_func, NULL);
-	buf_setdofunc(self->sendbuf, default_encrypt_func, NULL);
+	self->recvbuf = NULL;
+	self->sendbuf = NULL;
 
 	self->already_event = 0;
 	self->sendlock = 0;
 	self->recvlock = 0;
 	self->deleted = false;
 	self->connected = false;
+	self->bigbuf = bigbuf;
 	return true;
 }
 
@@ -327,6 +339,7 @@ bool socketer_sendmsg (struct socketer *self, void *data, int len)
 		return false;
 	if (self->deleted || !self->connected)
 		return false;
+	socketer_initsendbuf(self);
 	return buf_pushmessage(self->sendbuf, (char *)data, len);
 }
 
@@ -340,6 +353,7 @@ bool socketer_send_islimit (struct socketer *self, size_t len)
 	assert(len < _MAX_MSG_LEN);
 	if (!self)
 		return true;
+	socketer_initsendbuf(self);
 	return buf_add_islimit(self->sendbuf, len);
 }
 
@@ -350,7 +364,9 @@ void socketer_checksend (struct socketer *self)
 	if (!self)
 		return;
 	if (self->deleted || !self->connected)
-		return;	
+		return;
+	socketer_initsendbuf(self);
+
 	/* if not has data for send. */
 	if (buf_can_not_send(self->sendbuf))
 		return;
@@ -367,6 +383,7 @@ void *socketer_getmsg (struct socketer *self, char *buf, size_t bufsize)
 	assert(self != NULL);
 	if (!self)
 		return NULL;
+	socketer_initrecvbuf(self);
 	msg = buf_getmessage(self->recvbuf, &needclose, buf, bufsize);
 	if (needclose)
 		socketer_close(self);
@@ -380,7 +397,9 @@ void socketer_checkrecv (struct socketer *self)
 	if (!self)
 		return;
 	if (self->deleted || !self->connected)
-		return;	
+		return;		
+	socketer_initrecvbuf(self);
+
 	/* if not recv, because limit. */
 	if (buf_can_not_recv(self->recvbuf))
 		return;
@@ -397,7 +416,10 @@ void socketer_set_recv_critical (struct socketer *self, long size)
 	if (!self)
 		return;
 	if (size > 0)
+	{
+		socketer_initrecvbuf(self);
 		buf_set_limitsize(self->recvbuf, size);
+	}
 }
 
 /* set send data limit.*/
@@ -407,7 +429,10 @@ void socketer_set_send_critical (struct socketer *self, long size)
 	if (!self)
 		return;
 	if (size > 0)
+	{
+		socketer_initsendbuf(self);
 		buf_set_limitsize(self->sendbuf, size);
+	}
 }
 
 void socketer_use_compress (struct socketer *self)
@@ -415,6 +440,7 @@ void socketer_use_compress (struct socketer *self)
 	assert(self != NULL);
 	if (!self)
 		return;
+	socketer_initsendbuf(self);
 	buf_usecompress(self->sendbuf);
 }
 
@@ -423,6 +449,7 @@ void socketer_use_uncompress (struct socketer *self)
 	assert(self != NULL);
 	if (!self)
 		return;
+	socketer_initrecvbuf(self);
 	buf_useuncompress(self->recvbuf);
 }
 
@@ -433,9 +460,16 @@ void socketer_set_other_do_function (struct socketer *self, dofunc_f encrypt_fun
 	if (!self)
 		return;
 	if (encrypt_func)
+	{
+		socketer_initsendbuf(self);
 		buf_setdofunc(self->sendbuf, encrypt_func, logicdata);
+	}
+
 	if (decrypt_func)
+	{
+		socketer_initrecvbuf(self);
 		buf_setdofunc(self->recvbuf, decrypt_func, logicdata);
+	}
 }
 
 void socketer_use_encrypt (struct socketer *self)
@@ -443,6 +477,7 @@ void socketer_use_encrypt (struct socketer *self)
 	assert(self != NULL);
 	if (!self)
 		return;
+	socketer_initsendbuf(self);
 	buf_useencrypt(self->sendbuf);
 }
 
@@ -451,6 +486,7 @@ void socketer_use_decrypt (struct socketer *self)
 	assert(self != NULL);
 	if (!self)
 		return;
+	socketer_initrecvbuf(self);
 	buf_usedecrypt(self->recvbuf);
 }
 

@@ -45,6 +45,7 @@ struct socketer
 	volatile long recvlock;				/* if 0, then not set recv event. if 1, already set. */
 	volatile bool deleted;				/* delete flag. */
 	volatile bool connected;			/* connect flag. */
+	bool bigbuf;						/* if true, then is bigbuf */
 };
 
 #ifdef __cplusplus

@@ -209,7 +209,6 @@ struct net_buf *buf_create (bool bigbuf)
  * */
 void buf_setdofunc (struct net_buf *self, dofunc_f func, void *logicdata)
 {
-	assert(self != NULL);
 	assert(func != NULL);
 	if (!self || !func)
 		return;
@@ -220,7 +219,6 @@ void buf_setdofunc (struct net_buf *self, dofunc_f func, void *logicdata)
 /* release buf. */
 void buf_release (struct net_buf *self)
 {
-	assert(self != NULL);
 	if (!self)
 		return;
 	buf_real_release(self);
@@ -231,8 +229,9 @@ void buf_release (struct net_buf *self)
 /* set buf handle limit size. */
 void buf_set_limitsize (struct net_buf *self, int limit_len)
 {
-	assert(self != NULL);
 	assert(limit_len > 0);
+	if (!self)
+		return;
 	if (limit_len <= 0)
 		self->io_limitsize = 0;
 	else
@@ -241,33 +240,38 @@ void buf_set_limitsize (struct net_buf *self, int limit_len)
 
 void buf_usecompress (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return;
 	self->compress_falg = enum_compress;
 }
 
 void buf_useuncompress (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return;
 	self->compress_falg = enum_uncompress;
 }
 
 void buf_useencrypt (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return;
 	self->crypt_falg = enum_encrypt;
 }
 
 void buf_usedecrypt (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return;
 	self->crypt_falg = enum_decrypt;
 }
 
 /* push len, if is more than the limit, return true.*/
 bool buf_add_islimit (struct net_buf *self, size_t len)
 {
-	assert(self != NULL);
 	assert(len < _MAX_MSG_LEN);
+	if (!self)
+		return true;
 	if (self->io_limitsize == 0)
 		return false;
 	/* limit compare as io datasize or logic datasize.*/
@@ -280,7 +284,8 @@ bool buf_add_islimit (struct net_buf *self, size_t len)
 /* test limit, buffer data as limit */
 static bool buf_islimit (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return true;
 	if (self->io_limitsize == 0)
 		return false;
 	/* limit compare as io datasize or logic datasize.*/
@@ -299,6 +304,8 @@ bool buf_can_not_recv (struct net_buf *self)
 /* test has data for send, if not has data,  return true. */
 bool buf_can_not_send (struct net_buf *self)
 {
+	if (!self)
+		return true;
 	return ((self->iolist.datasize <= 0) && (self->logiclist.datasize <= 0));
 }
 
@@ -363,7 +370,6 @@ struct bufinfo buf_getwritebufinfo (struct net_buf *self)
 	writebuf.buf = NULL;
 	writebuf.len = 0;
 
-	assert(self != NULL);
 	if (buf_islimit(self))
 		return writebuf;
 	if (buf_is_use_uncompress(self))
@@ -389,8 +395,9 @@ static inline void blocklist_addwrite (struct blocklist *lst, int len)
 /* add write position. */
 void buf_addwrite (struct net_buf *self, char *buf, int len)
 {
-	assert(self != NULL);
 	assert(len > 0);
+	if (!self)
+		return;
 
 	/* decrypt opt. */
 	if (buf_is_use_decrypt(self))
@@ -535,7 +542,8 @@ static inline char *blocklist_getmessage (struct blocklist *lst, char *buf, bool
  * */
 bool buf_recv_end_do (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return false;
 	if (buf_is_use_uncompress(self))
 	{
 		/* get a compress packet, uncompress it, and then push the queue. */
@@ -608,7 +616,10 @@ struct bufinfo buf_getreadbufinfo (struct net_buf *self)
 
 	readbuf.buf = NULL;
 	readbuf.len = 0;
-	assert(self != NULL);
+
+	if (!self)
+		return readbuf;
+
 	if (buf_is_use_compress(self))
 		lst = &self->iolist;
 	else
@@ -647,9 +658,9 @@ static inline void blocklist_addread (struct blocklist *lst, int len)
 /* add read position. */
 void buf_addread (struct net_buf *self, int len)
 {
-	assert(self != NULL);
 	assert(len > 0);
-
+	if (!self)
+		return;
 	if (buf_is_use_compress(self))
 		blocklist_addread(&self->iolist, len);
 	else
@@ -659,7 +670,8 @@ void buf_addread (struct net_buf *self, int len)
 /* before send, do something. */
 void buf_send_before_do (struct net_buf *self)
 {
-	assert(self != NULL);
+	if (!self)
+		return;
 	if (buf_is_use_compress(self))
 	{
 		/* get all can read data, compress it. (compress data header is compress function do.)*/
@@ -689,7 +701,6 @@ void buf_send_before_do (struct net_buf *self)
 /* push packet into the buffer. */
 bool buf_pushmessage (struct net_buf *self, const char *msgbuf, int len)
 {
-	assert(self != NULL);
 	assert(msgbuf != NULL);
 	assert(len > 0);
 	if (!self || (len <= 0))
@@ -700,7 +711,6 @@ bool buf_pushmessage (struct net_buf *self, const char *msgbuf, int len)
 /* get packet from the buffer, if error, then needclose is true. */
 char *buf_getmessage (struct net_buf *self, bool *needclose, char *buf, size_t bufsize)
 {
-	assert(self != NULL);
 	if (!self || !needclose)
 		return NULL;
 	*needclose = false;
