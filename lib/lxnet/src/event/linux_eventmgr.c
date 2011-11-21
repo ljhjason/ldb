@@ -217,9 +217,9 @@ static int leader_func (void *argv)
 			atom_set(&mgr->event_num, num);
 			num = (num+(int)(EVERY_THREAD_PROCESS_EVENT_NUM)-1)/(int)(EVERY_THREAD_PROCESS_EVENT_NUM);
 		}
-		if (num < 0)
+		else if (num < 0)
 		{
-			if (SOCKET_ERR_RW_RETRIABLE(NET_GetLastError()))
+			if (num == -1 && NET_GetLastError() == EINTR)
 				return 0;
 			log_error("epoll_wait return value < 0, error, return value:%d, errno:%d", num, NET_GetLastError());
 		}
