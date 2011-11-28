@@ -168,11 +168,23 @@ struct poolmgr *poolmgr_create (size_t size, size_t alignment, size_t num, size_
 		size = sizeof(struct node);
 
 	assert(((size * num)/num) == size && "poolmgr_create exist overflow!");
+
+#ifndef NOTUSE_POOL
 	mem = (char *)malloc(sizeof(struct poolmgr) + sizeof(struct nodepool) + size * num);
+#else
+	mem = (char *)malloc(sizeof(struct poolmgr));
+#endif
+
 	if (!mem)
 	{
 		assert(false && "poolmgr_create malloc memory failed!");
+
+#ifndef NOTUSE_POOL
 		log_error("malloc %lu byte memory error!", sizeof(struct poolmgr) + sizeof(struct nodepool) + size * num);
+#else
+		log_error("malloc %lu byte memory error!", sizeof(struct poolmgr));
+#endif
+
 		return NULL;
 	}
 	self = (struct poolmgr *)mem;
@@ -193,11 +205,14 @@ struct poolmgr *poolmgr_create (size_t size, size_t alignment, size_t num, size_
 	self->freenode_num = 0;
 	self->f_head = NULL;
 
+#ifndef NOTUSE_POOL
 	/* create nodepool and push it. */
 	mem += sizeof(struct poolmgr);
 	np = nodepool_create(mem, sizeof(struct nodepool) + size * num, size, num);
 
 	poolmgr_push_pool(self, np);
+#endif
+
 	return self;
 }
 
@@ -262,11 +277,17 @@ void *poolmgr_getobject (struct poolmgr *self)
 	assert(self != NULL);
 	if (!self)
 		return NULL;
+
+#ifndef NOTUSE_POOL
 	bk = poolmgr_node_pop(self);
 	if (bk)
 		return bk;
 	else
 		return poolmgr_create_nodepool(self);
+#else
+	return malloc(self->base_block_size);
+#endif
+
 }
 
 static inline void poolmgr_node_push (struct poolmgr *self, struct node *nd)
@@ -362,6 +383,8 @@ static bool poolmgr_check_is_using (struct poolmgr *self, void *bk)
 void poolmgr_freeobject (struct poolmgr *self, void *bk)
 {
 
+#ifndef NOTUSE_POOL
+
 #ifndef NDEBUG
 	struct node *nd;
 #endif
@@ -383,6 +406,11 @@ void poolmgr_freeobject (struct poolmgr *self, void *bk)
 	poolmgr_node_push(self, bk);
 
 #endif
+
+#else
+	free(bk);
+#endif
+
 }
 
 void poolmgr_release (struct poolmgr *self)
@@ -392,6 +420,7 @@ void poolmgr_release (struct poolmgr *self)
 	if (!self)
 		return;
 
+#ifndef NOTUSE_POOL
 	/* check memory leak. */
 	assert(self->node_total == self->freenode_num && "poolmgr_release has memory not free!");
 
@@ -402,6 +431,8 @@ void poolmgr_release (struct poolmgr *self)
 	}
 	self->pool_head = NULL;
 	self->f_head = NULL;
+#endif
+
 	free(self);
 }
 
@@ -418,6 +449,8 @@ memory total: %lu(byte), %lu(kb), %lu(mb)\n\
 >>>>>>>>>>>>>>>>>> poolmgr info end >>>>>>>>>>>>>>>>>>\n"
 void poolmgr_getinfo (struct poolmgr *self, char *buf, size_t bufsize)
 {
+
+#ifndef NOTUSE_POOL
 	size_t totalsize;
 	assert(self != NULL);
 	assert(buf != NULL);
@@ -432,6 +465,10 @@ void poolmgr_getinfo (struct poolmgr *self, char *buf, size_t bufsize)
 	(unsigned long)self->node_total, (unsigned long)self->freenode_num, \
 	(unsigned long)self->base_num, (unsigned long)self->current_maxnum, (unsigned long)self->next_multiple, \
 	(unsigned long)totalsize, (unsigned long)totalsize/1024, (unsigned long)totalsize/(1024*1024));
+#else
+	snprintf(buf, bufsize, "not use pools!");
+#endif
+
 	buf[bufsize-1] = 0;
 }
 
