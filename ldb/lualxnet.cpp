@@ -40,6 +40,7 @@ extern "C"
 #include "idmgr.h"
 #include "lxnet.h"
 #include "msgbase.h"
+#include "utf8code.h"
 
 using namespace lxnet;
 
@@ -982,6 +983,44 @@ static const struct luaL_reg class_idmgr_function[] = {
 	{0, 0}
 };
 
+static int lua_utf8_toansi (lua_State *L)
+{
+	const char *src = luaL_checkstring(L, 1);
+	char *out = Utf8ToAnsi(src);
+	if (!out)
+	{
+		lua_pushstring(L, "");
+	}
+	else
+	{
+		lua_pushstring(L, out);
+		free(out);
+	}
+	return 1;
+}
+
+static int lua_ansi_toutf8 (lua_State *L)
+{
+	const char *src = luaL_checkstring(L, 1);
+	char *out = AnsiToUtf8(src);
+	if (!out)
+	{
+		lua_pushstring(L, "");
+	}
+	else
+	{
+		lua_pushstring(L, out);
+		free(out);
+	}
+	return 1;
+}
+
+static const struct luaL_reg class_encode_function[] = {
+	{"utf8_toansi", lua_utf8_toansi},
+	{"ansi_toutf8", lua_ansi_toutf8},
+	{0, 0}
+};
+
 static lua_State *s_L = NULL;
 
 static void on_ctrl_hander (int sig)
@@ -1018,7 +1057,9 @@ extern "C" int luaopen_lxnet(lua_State* L)
 
 	luaL_register(L, "idmgr", class_idmgr_function);
 
-	lua_pop(L, 7);
+	luaL_register(L, "encode", class_encode_function);
+
+	lua_pop(L, 8);
 
 	s_L = L;
 	signal(SIGINT, on_ctrl_hander);

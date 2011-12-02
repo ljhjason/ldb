@@ -16,7 +16,7 @@ DEFINC = -I"./../base/" -I"./../lib/lxnet/" -I"./../lib/lua-5.1.4/src"
 #
 #
 #maintest.c tree/rbtree.c  多了子目录，那就直接添加 目录/*.c即可   所有的源文件--  .c文件列表
-CSRCS = $(wildcard  ./*.c ./../base/idmgr.c)
+CSRCS = $(wildcard  ./*.c ./../base/idmgr.c ./../base/utf8code.c)
 
 CPPSRCS = $(wildcard ./*.cpp)
 
