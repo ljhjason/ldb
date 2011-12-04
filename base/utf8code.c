@@ -48,6 +48,7 @@ size_t UnicodeToAnsi (const wchar_t *utf16, char *utf8, size_t sz)
  * */
 size_t Utf8ToUnicode (const char *utf8, wchar_t *utf16, size_t sz)
 {
+	wchar_t *ptr;
 	while (((unsigned char)*utf8 & 0xc0) == 0x80)
 	{
 		++utf8;
@@ -72,7 +73,7 @@ size_t Utf8ToUnicode (const char *utf8, wchar_t *utf16, size_t sz)
 		return 0;
 	}
 
-	wchar_t *ptr = utf16 - 1;
+	ptr = utf16 - 1;
 	
 	while (*utf8)
 	{
@@ -109,6 +110,7 @@ size_t Utf8ToUnicode (const char *utf8, wchar_t *utf16, size_t sz)
  * */
 size_t UnicodeToUtf8(const wchar_t * utf16, char * utf8, size_t sz)
 {
+	unsigned char *last;
 	unsigned char *ptr = (unsigned char *)utf8;
 	if (sz < 3)
 	{
@@ -132,8 +134,6 @@ size_t UnicodeToUtf8(const wchar_t * utf16, char * utf8, size_t sz)
 	}
 
 	sz -= 2;
-
-	unsigned char * last;
 	
 	while (*utf16)
 	{
@@ -175,21 +175,24 @@ size_t UnicodeToUtf8(const wchar_t * utf16, char * utf8, size_t sz)
  * */
 char *Utf8ToAnsi (const char *utf8)
 {
+	int sz;
+	wchar_t *buf;
+	char *out;
 	if (!utf8 || utf8[0] == '\0')
 		return NULL;
 
 	/**
 	 * 先把字符串从utf8变为Unicode，然后再变为ansi
 	 * */
-	int sz = Utf8ToUnicode(utf8, NULL, 0);
-	wchar_t *buf = (wchar_t *)malloc((sz + 2) * sizeof(wchar_t));
+	sz = Utf8ToUnicode(utf8, NULL, 0);
+	buf = (wchar_t *)malloc((sz + 2) * sizeof(wchar_t));
 	if (!buf)
 		return NULL;
 	buf[sz] = 0;
 	buf[sz + 1] = 0;
 	sz = Utf8ToUnicode(utf8, buf, sz + 1);
 	sz = UnicodeToAnsi(buf, NULL, 0);
-	char *out = (char *)malloc(sz + 2);
+	out = (char *)malloc(sz + 2);
 	if (!out)
 	{
 		free(buf);
@@ -208,21 +211,24 @@ char *Utf8ToAnsi (const char *utf8)
  * */
 char *AnsiToUtf8 (const char *ansi)
 {
+	int sz;
+	wchar_t *buf;
+	char *out;
 	if (!ansi || ansi[0] == '\0')
 		return NULL;
 
 	/**
 	 * 先把字符串从ansi变为Unicode，然后再变为utf8
 	 * */
-	int sz = AnsiToUnicode(ansi, NULL, 0);
-	wchar_t *buf = (wchar_t *)malloc((sz + 2) * sizeof(wchar_t));
+	sz = AnsiToUnicode(ansi, NULL, 0);
+	buf = (wchar_t *)malloc((sz + 2) * sizeof(wchar_t));
 	if (!buf)
 		return NULL;
 	buf[sz] = 0;
 	buf[sz + 1] = 0;
 	sz = AnsiToUnicode(ansi, buf, sz + 1);
 	sz = UnicodeToUtf8(buf, NULL, 0);
-	char *out = (char *)malloc(sz + 2);
+	out = (char *)malloc(sz + 2);
 	if (!out)
 	{
 		free(buf);

@@ -186,11 +186,19 @@
 				Name="base"
 				>
 				<File
+					RelativePath="..\base\crosslib.h"
+					>
+				</File>
+				<File
 					RelativePath="..\base\idmgr.c"
 					>
 				</File>
 				<File
 					RelativePath="..\base\idmgr.h"
+					>
+				</File>
+				<File
+					RelativePath="..\base\utf8code.c"
 					>
 				</File>
 			</Filter>
