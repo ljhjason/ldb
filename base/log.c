@@ -93,6 +93,11 @@ void filelog_release (struct filelog *self)
 	free(self);
 }
 
+int mymkdir (const char *directname)
+{
+	return my_mkdir(directname);
+}
+
 /* log write file spend time */
 /*#define _TEST_WRITE_LOG_NEED_TIME*/
 

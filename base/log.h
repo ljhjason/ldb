@@ -47,6 +47,8 @@ enum debugtypelog_
 
 struct filelog;
 
+int mymkdir (const char *directname);
+
 void _log_printf_ (unsigned int type, const char *filename, const char *func, long line, const char *fmt, ...);
 
 /* print debug info and code file line */

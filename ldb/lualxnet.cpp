@@ -894,12 +894,20 @@ static int luafilelog_error (lua_State *L)
 	return 0;
 }
 
+static int luafilelog_mkdir (lua_State *L)
+{
+	const char *dirname = luaL_checkstring(L, 1);
+	lua_pushboolean(L, mymkdir(dirname) == 0);
+	return 1;
+}
+
 static const struct luaL_reg class_filelog_function[] = {
 	{"create", luafilelog_create},
 	{"release", luafilelog_release},
 	{"setdirectory", luafilelog_setdirectory},
 	{"writelog", luafilelog_writelog},
 	{"error", luafilelog_error},
+	{"mkdir", luafilelog_mkdir},
 	{0, 0}
 };
 
