@@ -288,13 +288,13 @@ static int lualistener_create (lua_State *L)
 	if (!lis)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number )(intptr_t )lis);
+		lua_pushlightuserdata(L, lis);
 	return 1;
 }
 
 static Listener *get_listener (lua_State *L, int idx)
 {
-	Listener *lis = (Listener *)(intptr_t)luaL_checknumber(L, idx);
+	Listener *lis = (Listener *)lua_touserdata(L, idx);
 	luaL_argcheck(L, lis != NULL, idx, "listener expected");
 	return lis;
 }
@@ -336,7 +336,7 @@ static int lualistener_accept (lua_State *L)
 	if (!sock)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number )(intptr_t )sock);
+		lua_pushlightuserdata(L, sock);
 	return 1;
 }
 
@@ -364,13 +364,13 @@ static int luasocketer_create (lua_State *L)
 	if (!sock)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number )(intptr_t )sock);
+		lua_pushlightuserdata(L, sock);
 	return 1;
 }
 
 static Socketer *get_socketer (lua_State *L, int idx)
 {
-	Socketer *sock = (Socketer *)(intptr_t)luaL_checknumber(L, idx);
+	Socketer *sock = (Socketer *)lua_touserdata(L, idx);
 	luaL_argcheck(L, sock != NULL, idx, "socketer expected");
 	return sock;
 }
@@ -463,7 +463,8 @@ static int luasocketer_getip (lua_State *L)
 static int luasocketer_sendmsg (lua_State *L)
 {
 	Socketer *sock = get_socketer(L, 1);
-	Msg *pMsg = (Msg *)(intptr_t)luaL_checknumber(L, 2);
+	Msg *pMsg = (Msg *)lua_touserdata(L, 2);
+	luaL_argcheck(L, pMsg != NULL, 2, "Msg expected");
 	lua_pushboolean(L, sock->SendMsg(pMsg));
 	return 1;
 }
@@ -475,7 +476,7 @@ static int luasocketer_getmsg (lua_State *L)
 	if (!pMsg)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number )(intptr_t )pMsg);
+		lua_pushlightuserdata(L, pMsg);
 	return 1;
 }
 
@@ -487,7 +488,7 @@ static int luasocketer_getmsg_ldb (lua_State *L)
 	if (!pMsg)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number )(intptr_t )pMsg);
+		lua_pushlightuserdata(L, pMsg);
 	return 1;
 }
 
@@ -534,7 +535,7 @@ static int luapacket_anyfor_ldb (lua_State *L)
 {
 	MessagePack *pack = &s_anyfor_ldb;
 	pack->ResetMsgLength();
-	lua_pushnumber(L, (lua_Number)(intptr_t)pack);
+	lua_pushlightuserdata(L, pack);
 	return 1;
 }
 
@@ -542,7 +543,7 @@ static int luapacket_anyfirst (lua_State *L)
 {
 	MessagePack *pack = &s_anyfirst;
 	pack->ResetMsgLength();
-	lua_pushnumber(L, (lua_Number)(intptr_t)pack);
+	lua_pushlightuserdata(L, pack);
 	return 1;
 }
 
@@ -550,13 +551,13 @@ static int luapacket_anysecond (lua_State *L)
 {
 	MessagePack *pack = &s_anysecond;
 	pack->ResetMsgLength();
-	lua_pushnumber(L, (lua_Number)(intptr_t)pack);
+	lua_pushlightuserdata(L, pack);
 	return 1;
 }
 
 static MessagePack *get_messagepack (lua_State *L, int idx)
 {
-	MessagePack *pack = (MessagePack *)(intptr_t)luaL_checknumber(L, idx);
+	MessagePack *pack = (MessagePack *)lua_touserdata(L, idx);
 	luaL_argcheck(L, pack != NULL, idx, "packet expected");
 	return pack;
 }
@@ -852,13 +853,13 @@ static int luafilelog_create (lua_State *L)
 	if (!log)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number)(intptr_t)log);
+		lua_pushlightuserdata(L, log);
 	return 1;
 }
 
 static struct filelog *get_filelog (lua_State *L, int idx)
 {
-	struct filelog *log = (struct filelog *)(intptr_t)luaL_checknumber(L, idx);
+	struct filelog *log = (struct filelog *)lua_touserdata(L, idx);
 	luaL_argcheck(L, log != NULL, idx, "filelog expected");
 	return log;
 }
@@ -921,13 +922,13 @@ static int luaidmgr_create (lua_State *L)
 	if (!mgr)
 		lua_pushnil(L);
 	else
-		lua_pushnumber(L, (lua_Number)(intptr_t)mgr);
+		lua_pushlightuserdata(L, mgr);
 	return 1;
 }
 
 static struct idmgr *get_idmgr (lua_State *L, int idx)
 {
-	struct idmgr *mgr = (struct idmgr *)(intptr_t)luaL_checknumber(L, idx);
+	struct idmgr *mgr = (struct idmgr *)lua_touserdata(L, idx);
 	luaL_argcheck(L, mgr != NULL, idx, "idmgr expected");
 	return mgr;
 }
