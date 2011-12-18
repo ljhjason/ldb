@@ -4,25 +4,9 @@
  * lcinx@163.com
 */
 
-
 #ifdef WIN32
 #include <windows.h>
-#include <objbase.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#include <uuid/uuid.h>
-
-typedef struct _GUID
-{
-	unsigned int Data1;
-	unsigned short Data2;
-	unsigned short Data3;
-	unsigned char Data4[8];
-}GUID, UUID;
-
 #endif
-
 extern "C"
 {
 #include <lua.h>
@@ -41,6 +25,7 @@ extern "C"
 #include "lxnet.h"
 #include "msgbase.h"
 #include "utf8code.h"
+#include "utility.h"
 
 using namespace lxnet;
 
@@ -120,27 +105,10 @@ static int lua_hasstr (lua_State *L)
 static int lua_create_guid (lua_State *L)
 {
 	char buf[128] = {0};
-	GUID guid;
-
-#ifdef WIN32
-	CoCreateGuid(&guid);
-#else
-	uuid_generate((unsigned char *)(&guid));
-#endif
-
-#ifdef WIN32
-	_snprintf
-#else
-	snprintf
-#endif
-		(buf, sizeof(buf), "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", 
-			guid.Data1, guid.Data2, guid.Data3, 
-			guid.Data4[0], guid.Data4[1],
-			guid.Data4[2], guid.Data4[3],
-			guid.Data4[4], guid.Data4[5],
-			guid.Data4[6], guid.Data4[7]);
-
-	lua_pushstring(L, buf);
+	if (create_guid(buf, sizeof(buf)))
+		lua_pushstring(L, buf);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -177,33 +145,17 @@ static int lua_get_millisecond (lua_State *L)
 
 static int lua_getfullname (lua_State *L)
 {
-	char buf[1024*2] = {0};
+	char buf[1024*8] = {0};
 	const char *name = luaL_checkstring(L, 1);
-
-#ifdef WIN32
-	GetFullPathName(name, sizeof(buf)-1, buf, NULL);
-#else
-	int fd = open(name, O_RDWR);
-	char srcname[1024*2];
-	snprintf(srcname, sizeof(srcname)-1, "/proc/%ld/fd/%d", (long)getpid(), fd);
-	readlink(srcname, buf, sizeof(buf)-1);
-	close(fd);
-#endif
-
+	getfilefullname(name, buf, sizeof(buf) - 1);
 	lua_pushstring(L, buf);
 	return 1;
 }
 
 static int lua_getcurrentpath (lua_State *L)
 {
-	char buf[1024*2] = {0};
-
-#ifdef WIN32
-	GetCurrentDirectory(sizeof(buf)-1, buf);
-#else
-	getcwd(buf, sizeof(buf)-1);
-#endif
-
+	char buf[1024*8] = {0};
+	getcurrentpath(buf, sizeof(buf) - 1);
 	lua_pushstring(L, buf);
 	return 1;
 }

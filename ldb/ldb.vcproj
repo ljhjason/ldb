@@ -201,6 +201,10 @@
 					RelativePath="..\base\utf8code.c"
 					>
 				</File>
+				<File
+					RelativePath="..\base\utility.c"
+					>
+				</File>
 			</Filter>
 		</Filter>
 	</Files>

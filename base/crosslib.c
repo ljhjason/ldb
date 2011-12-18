@@ -49,7 +49,6 @@ void delay_delay(unsigned long millisecond)
 
 #else
 
-#include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
 
