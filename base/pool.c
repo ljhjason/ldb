@@ -94,6 +94,7 @@ static inline void poolmgr_push_pool (struct poolmgr *self, struct nodepool *np)
 	self->pool_head = np;
 }
 
+#ifndef NOTUSE_POOL
 static struct nodepool *nodepool_create (void *mem, size_t mem_size, size_t block_size, size_t nodenum)
 {
 	struct nodepool *self;
@@ -113,6 +114,7 @@ static struct nodepool *nodepool_create (void *mem, size_t mem_size, size_t bloc
 	assert(self->current_pos <= self->end && "nodepool_create need check next_multiple, or check block_size * nodenum is overflow");
 	return self;
 }
+#endif
 
 static inline void nodepool_release (struct nodepool *self)
 {
@@ -150,7 +152,9 @@ struct poolmgr *poolmgr_create (size_t size, size_t alignment, size_t num, size_
 	size_t oldsize;
 	char *mem;
 	struct poolmgr *self;
+#ifndef NOTUSE_POOL
 	struct nodepool *np;
+#endif
 	assert(size != 0);
 	assert(alignment_check(alignment) && "poolmgr_create alignment is error!");
 	assert(num != 0);
@@ -244,6 +248,7 @@ static inline void *poolmgr_node_pop (struct poolmgr *self)
 #endif
 }
 
+#ifndef NOTUSE_POOL
 static void *poolmgr_create_nodepool (struct poolmgr *self)
 {
 	struct nodepool *np;
@@ -270,10 +275,13 @@ static void *poolmgr_create_nodepool (struct poolmgr *self)
 	poolmgr_push_pool(self, np);
 	return poolmgr_node_pop(self);
 }
+#endif
 
 void *poolmgr_getobject (struct poolmgr *self)
 {
+#ifndef NOTUSE_POOL
 	void *bk;
+#endif
 	assert(self != NULL);
 	if (!self)
 		return NULL;
@@ -303,6 +311,7 @@ static inline void poolmgr_node_push (struct poolmgr *self, struct node *nd)
 }
 
 #ifndef NDEBUG
+#ifndef NOTUSE_POOL
 static bool freenode_is_in_poolmgr (struct poolmgr *self, void *bk)
 {
 	struct node *nd = (struct node *)bk;
@@ -379,6 +388,7 @@ static bool poolmgr_check_is_using (struct poolmgr *self, void *bk)
 	return false;
 }
 #endif
+#endif
 
 void poolmgr_freeobject (struct poolmgr *self, void *bk)
 {
@@ -415,7 +425,9 @@ void poolmgr_freeobject (struct poolmgr *self, void *bk)
 
 void poolmgr_release (struct poolmgr *self)
 {
+#ifndef NOTUSE_POOL
 	struct nodepool *np, *next;
+#endif
 	assert(self != NULL);
 	if (!self)
 		return;
