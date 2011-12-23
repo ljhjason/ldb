@@ -71,7 +71,7 @@ local s_debugmgr = {
 	breaktable = {					--断点集
 		num = 0,					--断点总数
 		validnum = 0,				--有效断点数目
-		tb = {},					--断点表[line][source]
+		tb = {},					--断点表[source][line]
 		blist = {},					--断点表[number] 根据断点id查找断点
 		linehook = false,			--每行hook标记
 	}
@@ -99,25 +99,33 @@ end
 
 --真实的增加断点
 local function realaddbreakpoint(line, source, cmp1, cmp2, cmp3)
-	if s_debugmgr.breaktable.tb[line] then
-		local tl1 = s_debugmgr.breaktable.tb[line][cmp1]
-		local tl2 = s_debugmgr.breaktable.tb[line][cmp2]
-		local tl3 = s_debugmgr.breaktable.tb[line][cmp3]
-		if tl1 or tl2 or tl3 then
-			assert(tl1 == tl2 and tl1 == tl3)
-			if tl1.active then
-				return "Note: breakpoint "..tostring(tl1.number).." already at file: "..source..", line "..tostring(line).."."
-			else
-				local oldvalidnum = s_debugmgr.breaktable.validnum
-				s_debugmgr.breaktable.validnum = s_debugmgr.breaktable.validnum + 1
-				tl1.active = true
+	local tl1, tl2, tl3
+	local temp1 = s_debugmgr.breaktable.tb[cmp1]
+	if temp1 then
+		tl1 = temp1[line]
+	end
+	local temp2 = s_debugmgr.breaktable.tb[cmp2]
+	if temp2 then
+		tl2 = temp2[line]
+	end
+	local temp3 = s_debugmgr.breaktable.tb[cmp3]
+	if temp3 then
+		tl3 = temp3[line]
+	end
+	if tl1 or tl2 or tl3 then
+		assert(tl1 == tl2 and tl1 == tl3)
+		if tl1.active then
+			return "Note: breakpoint "..tostring(tl1.number).." already at file: "..source..", line "..tostring(line).."."
+		else
+			local oldvalidnum = s_debugmgr.breaktable.validnum
+			s_debugmgr.breaktable.validnum = s_debugmgr.breaktable.validnum + 1
+			tl1.active = true
 				
-				--若激活的数目从0变为大于0，则尝试下变更模式
-				if oldvalidnum == 0 then
-					userlinetrace()
-				end
-				return "Enable breakpoint "..tostring(tl1.number).."."
+			--若激活的数目从0变为大于0，则尝试下变更模式
+			if oldvalidnum == 0 then
+				userlinetrace()
 			end
+			return "Enable breakpoint "..tostring(tl1.number).."."
 		end
 	end
 	local tbl = {}
@@ -129,15 +137,22 @@ local function realaddbreakpoint(line, source, cmp1, cmp2, cmp3)
 	tbl.active = true				--断点激活标记
 	tbl.number = s_debugmgr.num		--断点编号
 
-	if not s_debugmgr.breaktable.tb[line] then
-		s_debugmgr.breaktable.tb[line] = {}
+	if not temp1 then
+		s_debugmgr.breaktable.tb[cmp1] = {}
 	end
+	if not temp2 then
+		s_debugmgr.breaktable.tb[cmp2] = {}
+	end
+	if not temp3 then
+		s_debugmgr.breaktable.tb[cmp3] = {}
+	end
+
 
 	local oldvalidnum = s_debugmgr.breaktable.validnum
 
-	s_debugmgr.breaktable.tb[line][cmp1] = tbl
-	s_debugmgr.breaktable.tb[line][cmp2] = tbl
-	s_debugmgr.breaktable.tb[line][cmp3] = tbl
+	s_debugmgr.breaktable.tb[cmp1][line] = tbl
+	s_debugmgr.breaktable.tb[cmp2][line] = tbl
+	s_debugmgr.breaktable.tb[cmp3][line] = tbl
 
 	s_debugmgr.breaktable.blist[tbl.number] = tbl
 
@@ -201,9 +216,9 @@ local function delbreakpoint(bpnum)
 	if not bp then
 		return "No breakpoint number "..bpnum.."."
 	end
-	s_debugmgr.breaktable.tb[bp.line][bp.cmpsource1] = nil
-	s_debugmgr.breaktable.tb[bp.line][bp.cmpsource2] = nil
-	s_debugmgr.breaktable.tb[bp.line][bp.cmpsource3] = nil
+	s_debugmgr.breaktable.tb[bp.cmpsource1][bp.line] = nil
+	s_debugmgr.breaktable.tb[bp.cmpsource2][bp.line] = nil
+	s_debugmgr.breaktable.tb[bp.cmpsource3][bp.line] = nil
 	s_debugmgr.breaktable.blist[bp.number] = nil
 
 	s_debugmgr.breaktable.num = s_debugmgr.breaktable.num - 1
@@ -859,15 +874,17 @@ local function trace(event, line)
 
 	local touchbpstr = nil
 
+	local tbtable = s_debugmgr.breaktable.tb[env.source]
+
 	--断点处理
-	if not s_debugmgr.trace and s_debugmgr.breaktable.tb[line] then
-		local bp = s_debugmgr.breaktable.tb[line][env.source]
+	if not s_debugmgr.trace and tbtable then
+		local bp = tbtable[line]
 		if bp and bp.active then
 			s_debugmgr.nextstep = false
 			s_debugmgr.trace = true
 
 			--告知遇到断点了
-			touchbpstr = "Breakpoint "..tostring(bp.number)..", "..(env.name or "unknow").." at "..bp.source..":"..tostring(bp.line)
+			touchbpstr = "Breakpoint "..tostring(bp.number)..", at "..bp.source..":"..tostring(bp.line)
 		end
 	end
 
