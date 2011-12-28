@@ -850,12 +850,13 @@ end
 
 --行事件的回调函数
 local function trace(event, line)
-	local env = dgetinfo(2)
+	local forlua_dgetinfo = forlua_dgetinfo
+	local source = forlua_dgetinfo(2)
 
 	--不能调试此文件
-	if s_thisfilename == env.source then
+	if s_thisfilename == source then
 		return
-	end	
+	end
 
 	--为单步调试 n
 	if s_debugmgr.nextstep then
@@ -865,7 +866,7 @@ local function trace(event, line)
 			s_debugmgr.nextstep = false
 			s_debugmgr.trace = true
 		elseif trace_count == s_debugmgr.trace_count then
-			if s_debugmgr.current_func == env.func then
+			if s_debugmgr.current_func == dgetinfo(2).func then
 				s_debugmgr.nextstep = false
 				s_debugmgr.trace = true
 			end
@@ -874,7 +875,7 @@ local function trace(event, line)
 
 	local touchbpstr = nil
 
-	local tbtable = s_debugmgr.breaktable.tb[env.source]
+	local tbtable = s_debugmgr.breaktable.tb[source]
 
 	--断点处理
 	if not s_debugmgr.trace and tbtable then
@@ -891,7 +892,7 @@ local function trace(event, line)
 	--为单步调试时 s
 	if s_debugmgr.trace then
 		--回馈这行的信息
-		local filename = ssub(env.source, 2, #env.source)
+		local filename = ssub(source, 2, #source)
 		local retlines, num = getfileline(filename, line, 1)
 		local msg = packet.anyfor_ldb()
 		packet.settype(msg, 0)

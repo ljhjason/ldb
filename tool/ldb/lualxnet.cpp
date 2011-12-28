@@ -102,6 +102,50 @@ static int lua_hasstr (lua_State *L)
 	return 1;
 }
 
+static lua_State *getthread (lua_State *L, int *arg)
+{
+	if (lua_isthread(L, 1))
+	{
+		*arg = 1;
+		return lua_tothread(L, 1);
+	}
+	else
+	{
+		*arg = 0;
+		return L;
+	}
+}
+
+static int lua_forlua_dgetinfo (lua_State *L)
+{
+	lua_Debug ar;
+	int arg;
+	lua_State *L1 = getthread(L, &arg);
+	const char *options = luaL_optstring(L, arg+2, "flnSu");
+	if (lua_isnumber(L, arg+1))
+	{
+		if (!lua_getstack(L1, (int)lua_tointeger(L, arg+1), &ar))
+		{
+			lua_pushnil(L);  /* level out of range */
+			return 1;
+		}
+	}
+	else if (lua_isfunction(L, arg+1))
+	{
+		lua_pushfstring(L, ">%s", options);
+		options = lua_tostring(L, -1);
+		lua_pushvalue(L, arg+1);
+		lua_xmove(L, L1, 1);
+	}
+	else
+		return luaL_argerror(L, arg+1, "function or level expected");
+	if (!lua_getinfo(L1, options, &ar))
+		return luaL_argerror(L, arg+2, "invalid option");
+
+	lua_pushstring(L, ar.source);
+	return 1;
+}
+
 static int lua_create_guid (lua_State *L)
 {
 	char buf[128] = {0};
@@ -218,6 +262,7 @@ static int lua_parseint64 (lua_State *L)
 }
 
 static const struct luaL_reg g_function[] = {
+	{"forlua_dgetinfo", lua_forlua_dgetinfo},
 	{"create_guid", lua_create_guid},
 	{"hasstr", lua_hasstr},
 	{"rand", lua_krand},
