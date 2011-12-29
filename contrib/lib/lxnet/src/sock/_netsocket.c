@@ -103,7 +103,7 @@ size_t socketer_getsize ()
 }
 
 /* default encrypt/decrypt function key. */
-const char chKey = 0xae;
+static const char chKey = 0xae;
 static void default_decrypt_func (void *logicdata, char *buf, int len)
 {
 	int i;
