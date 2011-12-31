@@ -31,10 +31,13 @@ struct threadinfo
 	struct thread_localuse msgbuf[_MAX_SAFE_THREAD_NUM];		/* for getmsg temp buf */
 	struct thread_localuse compressbuf[_MAX_SAFE_THREAD_NUM];	/* compress/uncompress. */
 	struct thread_localuse quicklzbuf[_MAX_SAFE_THREAD_NUM];	/* for quicklz lib buffer. */
+	volatile long msgbuf_freeindex;
+	volatile long compressbuf_freeindex;
+	volatile long quicklzbuf_freeindex;
 };
 static struct threadinfo s_threadlock = {false};
 
-static void *threadlocal_getbuf (struct thread_localuse self[_MAX_SAFE_THREAD_NUM], size_t needsize)
+static void *threadlocal_getbuf (struct thread_localuse self[_MAX_SAFE_THREAD_NUM], size_t needsize, volatile long *freeindex)
 {
 	THREAD_ID currentthreadid = CURRENT_THREAD;
 	int index;
@@ -54,9 +57,10 @@ static void *threadlocal_getbuf (struct thread_localuse self[_MAX_SAFE_THREAD_NU
 		}
 	}
 	/* check index and max thread num. */
-	if (index >= _MAX_SAFE_THREAD_NUM)
+	index = (int)atom_fetch_add(freeindex, 1);
+	if (index < 0 || index >= _MAX_SAFE_THREAD_NUM)
 	{
-		log_error("if (index >= _MAX_SAFE_THREAD_NUM)");
+		log_error("if (index < 0 || index >= _MAX_SAFE_THREAD_NUM) index:%d, _MAX_SAFE_THREAD_NUM:%d", index, _MAX_SAFE_THREAD_NUM);
 		exit(1);
 	}
 	/* if index can use, then create new thread buffer. */
@@ -78,7 +82,7 @@ void *threadbuf_get_msg_buf ()
 		log_error("if (!s_threadlock.isinit)");
 		exit(1);
 	}
-	return threadlocal_getbuf(s_threadlock.msgbuf, s_threadlock.msgmaxsize);
+	return threadlocal_getbuf(s_threadlock.msgbuf, s_threadlock.msgmaxsize, &s_threadlock.msgbuf_freeindex);
 }
 
 /* get temp compress/uncompress buf. */
@@ -90,7 +94,7 @@ struct bufinfo threadbuf_get_compress_buf ()
 		log_error("if (!s_threadlock.isinit)");
 		exit(1);
 	}
-	tempbuf.buf = threadlocal_getbuf(s_threadlock.compressbuf, s_threadlock.compressmaxsize);
+	tempbuf.buf = threadlocal_getbuf(s_threadlock.compressbuf, s_threadlock.compressmaxsize, &s_threadlock.compressbuf_freeindex);
 	tempbuf.len = s_threadlock.compressmaxsize;
 	return tempbuf;
 }
@@ -103,7 +107,7 @@ void *threadbuf_get_quicklz_buf ()
 		log_error("if (!s_threadlock.isinit)");
 		exit(1);
 	}
-	return threadlocal_getbuf(s_threadlock.quicklzbuf, s_threadlock.quicklz_size);
+	return threadlocal_getbuf(s_threadlock.quicklzbuf, s_threadlock.quicklz_size, &s_threadlock.quicklzbuf_freeindex);
 }
 
 
@@ -149,6 +153,9 @@ bool threadbuf_init (size_t msgmaxsize, size_t compressmaxsize)
 	threadlocal_init(s_threadlock.msgbuf);
 	threadlocal_init(s_threadlock.compressbuf);
 	threadlocal_init(s_threadlock.quicklzbuf);
+	s_threadlock.msgbuf_freeindex = 0;
+	s_threadlock.compressbuf_freeindex = 0;
+	s_threadlock.quicklzbuf_freeindex = 0;
 	s_threadlock.isinit = true;
 	return true;
 }
