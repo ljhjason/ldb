@@ -41,7 +41,7 @@ bool create_guid (char *buf, size_t bufsize)
 	uuid_generate((unsigned char *)(&guid));
 #endif
 
-	snprintf(buf, bufsize - 1, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", 
+	snprintf(buf, bufsize, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", 
 			guid.Data1, guid.Data2, guid.Data3, 
 			guid.Data4[0], guid.Data4[1],
 			guid.Data4[2], guid.Data4[3],
