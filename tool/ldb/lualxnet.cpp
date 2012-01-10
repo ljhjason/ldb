@@ -642,8 +642,10 @@ static int luapacket_getstring (lua_State *L)
 	int16 needread = luaL_optinteger(L, 2, SHRT_MAX);
 	if (needread <= 0 || needread > SHRT_MAX)
 		needread = SHRT_MAX;
-	pack->GetString(buf, needread);
-	lua_pushstring(L, buf);
+	if (pack->GetString(buf, needread))
+		lua_pushstring(L, buf);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
