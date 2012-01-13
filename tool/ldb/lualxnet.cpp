@@ -527,6 +527,7 @@ static const struct luaL_reg class_socketer_function[] = {
 static MessagePack s_anyfor_ldb;
 static MessagePack s_anyfirst;
 static MessagePack s_anysecond;
+static MessagePack s_anythird;
 
 static int luapacket_anyfor_ldb (lua_State *L)
 {
@@ -540,6 +541,7 @@ static int luapacket_anyfirst (lua_State *L)
 {
 	MessagePack *pack = &s_anyfirst;
 	pack->ResetMsgLength();
+	pack->SetType(-1);
 	lua_pushlightuserdata(L, pack);
 	return 1;
 }
@@ -548,6 +550,16 @@ static int luapacket_anysecond (lua_State *L)
 {
 	MessagePack *pack = &s_anysecond;
 	pack->ResetMsgLength();
+	pack->SetType(-1);
+	lua_pushlightuserdata(L, pack);
+	return 1;
+}
+
+static int luapacket_anythird (lua_State *L)
+{
+	MessagePack *pack = &s_anythird;
+	pack->ResetMsgLength();
+	pack->SetType(-1);
 	lua_pushlightuserdata(L, pack);
 	return 1;
 }
@@ -815,6 +827,7 @@ static const struct luaL_reg class_packet_function[] = {
 	{"anyfor_ldb", luapacket_anyfor_ldb},
 	{"anyfirst", luapacket_anyfirst},
 	{"anysecond", luapacket_anysecond},
+	{"anythird", luapacket_anythird},
 
 	{"getheadlen", luapacket_getheadlen},
 	{"canpush", luapacket_canpush},
