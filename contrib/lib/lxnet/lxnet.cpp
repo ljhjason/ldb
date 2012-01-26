@@ -55,7 +55,7 @@ static void infomgr_release ()
 namespace lxnet{
 
 /* ¼àÌı*/
-bool Listener::Listen (short port, int backlog)
+bool Listener::Listen (unsigned short port, int backlog)
 {
 	return listener_listen(m_self, port, backlog);
 }

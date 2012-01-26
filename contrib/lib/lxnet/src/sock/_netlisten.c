@@ -64,7 +64,7 @@ void listener_release (struct listener *self)
  * port --- listen port.
  * backlog --- listen queue, max wait connect. 
  * */
-bool listener_listen (struct listener *self, short port, int backlog)
+bool listener_listen (struct listener *self, unsigned short port, int backlog)
 {
 	struct sockaddr_in soaddr;
 	assert(self != NULL);

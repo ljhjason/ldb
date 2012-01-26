@@ -31,7 +31,7 @@ private:
 	void operator delete(void *p);
 public:
 	/* 监听*/
-	bool Listen (short port, int backlog);
+	bool Listen (unsigned short port, int backlog);
 
 	/* 关闭用于监听的套接字，停止监听*/
 	void Close ();
