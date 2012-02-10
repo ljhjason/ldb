@@ -7,6 +7,12 @@
 extern "C"{
 #endif
 
+struct charnuminfo
+{
+	int utf8num;
+	int englishnum;
+};
+
 /**
  * 把字符串从utf8变为ansi，返回新的字符串，切记用完后调用free释放返回的字符串
  * */
@@ -20,6 +26,11 @@ char *AnsiToUtf8 (const char *ansi);
 
 
 
+
+/**
+ * 分析utf8字符串，获取utf8非英文的数量和英文的数量
+ * */
+void Utf8CharInfo (const char *utf8, struct charnuminfo *info);
 
 /**
  * 从ansi变为宽字符

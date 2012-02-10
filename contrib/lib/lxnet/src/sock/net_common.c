@@ -28,12 +28,13 @@ net_socket socket_create ()
 int socket_close (net_socket *sockfd)
 {
 	int res;
-#ifdef WIN32
-	res = closesocket(*sockfd);
-#else
-	res = close(*sockfd);
-#endif
+	net_socket temp = *sockfd;
 	*sockfd = NET_INVALID_SOCKET;
+#ifdef WIN32
+	res = closesocket(temp);
+#else
+	res = close(temp);
+#endif
 	return res;
 }
 

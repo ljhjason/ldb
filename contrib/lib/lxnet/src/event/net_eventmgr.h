@@ -27,6 +27,9 @@ void socket_setup_recvevent (struct socketer *self);
 /* remove recv event. */
 void socket_remove_recvevent (struct socketer *self);
 
+/* set recv data. */
+void socket_recvdata (struct socketer *self, char *data, int len);
+
 /* set send event. */
 void socket_setup_sendevent (struct socketer *self);
 

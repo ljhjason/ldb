@@ -42,6 +42,30 @@ size_t UnicodeToAnsi (const wchar_t *utf16, char *utf8, size_t sz)
 }
 
 /**
+ * 分析utf8字符串，获取utf8非英文的数量和英文的数量
+ * */
+void Utf8CharInfo (const char *utf8, struct charnuminfo *info)
+{
+	if (!utf8 || !info)
+		return;
+
+	info->utf8num = 0;
+	info->englishnum = 0;
+	while (*utf8)
+	{
+		signed char c = *utf8;
+		if ((c & 0xc0) != 0x80)
+		{
+			if (c > 0)
+				++info->englishnum;
+			else
+				++info->utf8num;
+		}
+		++utf8;
+	}
+}
+
+/**
  * 从utf8变为宽字符。
  * 若sz为0，则计算转换后的字符数量，此时字符为wchar_t类型，切记。
  * 若sz大于0，则进行转换并返回转换后的字符数量

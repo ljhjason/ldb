@@ -29,17 +29,21 @@ static __inline int64 __GetSecondCount__()
  */
 int64 high_millisecond_()
 {
+	double tmp;
 	LARGE_INTEGER liCurrent;
 	QueryPerformanceCounter(&liCurrent);
-	return ((int64)(liCurrent.QuadPart * (int64)1000) / __GetSecondCount__());
+	tmp = (double)liCurrent.QuadPart / (double)__GetSecondCount__();
+	return (int64)(tmp * 1000);
 }
 
 /* get current microsecond time */
 int64 high_microsecond_()
 {
+	double tmp;
 	LARGE_INTEGER liCurrent;
 	QueryPerformanceCounter(&liCurrent);
-	return ((int64)(liCurrent.QuadPart * (int64)1000000) / __GetSecondCount__());
+	tmp = (double)liCurrent.QuadPart / (double)__GetSecondCount__();
+	return (int64)(tmp * 1000000);
 }
 
 void delay_delay(unsigned long millisecond)

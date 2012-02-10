@@ -136,6 +136,7 @@ void _log_printf_ (unsigned int type, const char *filename, const char *func, lo
 	vprintf(fmt, args);
 	va_end(args);
 	printf("\n");
+	fflush(stdout);
 }
 
 /* sshow/hide log_debug function out*/

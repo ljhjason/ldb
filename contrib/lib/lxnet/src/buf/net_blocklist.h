@@ -20,7 +20,7 @@ struct blocklist
 	bool isnewmsg;			/* is new packet ? */
 	int msglen;				/* current packet length. */
 
-	int canusesize;			/* can use size, pusher or getter, signle maintenance,
+	volatile int canusesize;/* can use size, pusher or getter, signle maintenance,
 							   if is 0, then head or tail is full or null. or else, can use.
 							   Scenes look at the specific meaning of. */
 	struct block *head;

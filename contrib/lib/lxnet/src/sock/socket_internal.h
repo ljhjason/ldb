@@ -29,8 +29,7 @@ struct socketer
 	struct overlappedstruct recv_event;
 	struct overlappedstruct send_event;
 #else
-	bool alreadyresetlock;				/* for reset lock in linux */
-	int events;							/* for epoll event.*/
+	volatile int events;				/* for epoll event.*/
 #endif
 
 	net_socket sockfd;					/* socket fd. */
@@ -46,6 +45,8 @@ struct socketer
 	volatile bool deleted;				/* delete flag. */
 	volatile bool connected;			/* connect flag. */
 	bool bigbuf;						/* if true, then is bigbuf */
+
+	volatile long ref;					/* the socketer object reference number */
 };
 
 #ifdef __cplusplus

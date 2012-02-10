@@ -76,7 +76,7 @@ void socketer_use_decrypt (struct socketer *self);
 
 /* interface for event mgr. */
 
-void socketer_on_recv (struct socketer *self);
+void socketer_on_recv (struct socketer *self, int len);
 
 void socketer_on_send (struct socketer *self, int len);
 

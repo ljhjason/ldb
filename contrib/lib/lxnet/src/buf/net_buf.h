@@ -89,7 +89,7 @@ void buf_send_before_do (struct net_buf *self);
 bool buf_pushmessage (struct net_buf *self, const char *msgbuf, int len);
 
 /* get packet from the buffer, if error, then needclose is true. */
-char *buf_getmessage (struct net_buf *self, bool *needclose, char *buf, size_t bufsize);
+char *buf_getmessage (struct net_buf *self, bool *needclose, char *buf, size_t bufsize, int sockfd);
 
 
 /* 

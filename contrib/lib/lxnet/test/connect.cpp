@@ -29,6 +29,11 @@ int main()
 	
 	while (!newclient->Connect("127.0.0.1", 30012))
 	{
+#ifdef WIN32
+			Sleep(0);
+#else
+			sleep(0);
+#endif
 	}
 	printf("connect succeed!\n");
 

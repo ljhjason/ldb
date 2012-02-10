@@ -1036,9 +1036,21 @@ static int lua_ansi_toutf8 (lua_State *L)
 	return 1;
 }
 
+static int lua_utf8_charinfo (lua_State *L)
+{
+	const char *src = luaL_checkstring(L, 1);
+	struct charnuminfo info;
+	Utf8CharInfo(src, &info);
+	lua_pushinteger(L, info.utf8num + info.englishnum);
+	lua_pushinteger(L, info.utf8num);
+	lua_pushinteger(L, info.englishnum);
+	return 3;
+}
+
 static const struct luaL_reg class_encode_function[] = {
 	{"utf8_toansi", lua_utf8_toansi},
 	{"ansi_toutf8", lua_ansi_toutf8},
+	{"utf8_charinfo", lua_utf8_charinfo},
 	{0, 0}
 };
 

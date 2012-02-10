@@ -23,8 +23,8 @@ extern "C"{
 /* block buffer. */
 struct block
 {
-	size_t read;
-	size_t write;
+	volatile size_t read;
+	volatile size_t write;
 	size_t encrypt_pos;	/* encrypt pos. */
 	size_t maxsize;
 	struct block *next;

@@ -22,7 +22,6 @@
 #endif
 
 
-
 /*
 (Note!)
   0 bytes WSASend delivery, will directly receive, he would not do to write test
@@ -32,10 +31,6 @@
 enum e_control_value
 {
 	enum_list_run_delay = 300,
-
-#ifndef WIN32
-	enum_reset_lock_inlinuxtime = 3000,
-#endif
 
 	enum_list_close_delaytime = 15000,
 };
@@ -55,15 +50,11 @@ static struct socketmgr s_mgr = {false};
 /* add to delay close list. */
 static void socketmgr_add_to_waite (struct socketer *self)
 {
-	if (self->deleted)
-		return;
-	self->deleted = true;
-	assert(self->next == NULL);
 	LOCK_LOCK(&s_mgr.mgr_lock);
+	self->next = NULL;
 	if (s_mgr.tail)
 	{
 		s_mgr.tail->next = self;
-		self->next = NULL;
 	}
 	else
 	{
@@ -87,6 +78,7 @@ static struct socketer *socketmgr_pop_front ()
 	}
 	
 	s_mgr.head = so->next;
+	so->next = NULL;
 	if (s_mgr.tail == so)
 	{
 		s_mgr.tail = NULL;
@@ -151,7 +143,6 @@ static bool socketer_init (struct socketer *self, bool bigbuf)
 	memset(&self->recv_event, 0, sizeof(self->recv_event));
 	memset(&self->send_event, 0, sizeof(self->send_event));
 #else
-	self->alreadyresetlock = false;
 	self->events = 0;
 #endif
 
@@ -167,6 +158,7 @@ static bool socketer_init (struct socketer *self, bool bigbuf)
 	self->deleted = false;
 	self->connected = false;
 	self->bigbuf = bigbuf;
+	self->ref = 1;
 	return true;
 }
 
@@ -233,7 +225,10 @@ void socketer_release (struct socketer *self)
 	if (self->deleted)
 		return;
 
+	self->deleted = true;
+
 	socketer_close(self);
+	
 	socketmgr_add_to_waite(self);
 }
 
@@ -372,6 +367,10 @@ void socketer_checksend (struct socketer *self)
 		return;
 	if (atom_compare_and_swap(&self->sendlock, 0, 1) == 0)	/* if 0, then set 1, and set sendevent. */
 	{
+		if (atom_inc(&self->ref) <= 1)
+		{
+			log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+		}
 		socket_setup_sendevent(self);
 	}
 }
@@ -384,7 +383,7 @@ void *socketer_getmsg (struct socketer *self, char *buf, size_t bufsize)
 	if (!self)
 		return NULL;
 	socketer_initrecvbuf(self);
-	msg = buf_getmessage(self->recvbuf, &needclose, buf, bufsize);
+	msg = buf_getmessage(self->recvbuf, &needclose, buf, bufsize, self->sockfd);
 	if (needclose)
 		socketer_close(self);
 	return msg;
@@ -405,6 +404,11 @@ void socketer_checkrecv (struct socketer *self)
 		return;
 	if (atom_compare_and_swap(&self->recvlock, 0, 1) == 0)	/* if 0, then set 1, and set recvevent.*/
 	{
+		if (atom_inc(&self->ref) <= 1)
+		{
+			log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+		}
+
 		socket_setup_recvevent(self);
 	}
 }
@@ -492,14 +496,27 @@ void socketer_use_decrypt (struct socketer *self)
 
 /* interface for event mgr. */
 
-void socketer_on_recv (struct socketer *self)
+void socketer_on_recv (struct socketer *self, int len)
 {
 	int res;
 	struct bufinfo writebuf;
-	
 	debuglog("on recv\n");
 
 	assert(self->recvlock == 1);
+	assert(len >= 0);
+
+#ifdef WIN32
+	if (len > 0)
+	{
+		writebuf = buf_getwritebufinfo(self->recvbuf);
+		if (writebuf.len < len || !writebuf.buf)
+		{
+			log_error("if (writebuf.len < len)  len:%d, writebuf.len:%d, writebuf.buf:%x", len, writebuf.len, writebuf.buf);
+		}
+		buf_addwrite(self->recvbuf, writebuf.buf, len);
+	}
+#endif
+
 	for (;;)
 	{
 		writebuf = buf_getwritebufinfo(self->recvbuf);
@@ -510,7 +527,12 @@ void socketer_on_recv (struct socketer *self)
 			{
 				/* uncompress error, close socket. */
 				socketer_close(self);
-				atom_dec(&self->recvlock);
+
+				if (atom_dec(&self->ref) < 1)
+				{
+					log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+				}
+
 				return;
 			}
 
@@ -519,7 +541,15 @@ void socketer_on_recv (struct socketer *self)
 			socket_remove_recvevent(self);
 #endif
 
-			atom_dec(&self->recvlock);
+			if (atom_dec(&self->ref) < 1)
+			{
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+			}
+
+			if (atom_dec(&self->recvlock) != 0)
+			{
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+			}
 			return;
 		}
 
@@ -535,7 +565,12 @@ void socketer_on_recv (struct socketer *self)
 			{
 				/* uncompress error, close socket. */
 				socketer_close(self);
-				atom_dec(&self->recvlock);
+
+				if (atom_dec(&self->ref) < 1)
+				{
+					log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+				}
+
 				return;
 			}
 
@@ -543,14 +578,23 @@ void socketer_on_recv (struct socketer *self)
 			{
 				/* error, close socket. */
 				socketer_close(self);
-				atom_dec(&self->recvlock);
+
+				if (atom_dec(&self->ref) < 1)
+				{
+					log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+				}
+
 				debuglog("recv func, socket is error!, so close it!\n");
 			}
 			else
 			{
 #ifdef WIN32
+				/* if > 1, then set is 1. */
+				if (writebuf.len > 1)
+					writebuf.len = 1;
+
 				/* set recv event. */
-				socket_setup_recvevent(self);
+				socket_recvdata(self, writebuf.buf, writebuf.len);
 				debuglog("setup recv event...\n");
 #endif
 			}
@@ -591,7 +635,16 @@ void socketer_on_send (struct socketer *self, int len)
 			socket_remove_sendevent(self);
 #endif
 
-			atom_dec(&self->sendlock);
+			if (atom_dec(&self->ref) < 1)
+			{
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+			}
+
+			if (atom_dec(&self->sendlock) != 0)
+			{
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+			}
+
 			return;
 		}
 
@@ -607,19 +660,24 @@ void socketer_on_send (struct socketer *self, int len)
 			{
 				/* error, close socket. */
 				socketer_close(self);
-				atom_dec(&self->sendlock);
+				
+				if (atom_dec(&self->ref) < 1)
+				{
+					log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD, self->connected, self->deleted);
+				}
 				debuglog("send func, socket is error!, so close it!\n");
 			}
 			else
 			{
 #ifdef WIN32
-				/* if > 512, then set is 512. */
-				if (readbuf.len > 512)
-					readbuf.len = 512;
+				/* if > 1, then set is 1. */
+				if (readbuf.len > 1)
+					readbuf.len = 1;
 
 				/* set send data, because WSASend 0 size data, not check can send. */
 				socket_senddata(self, readbuf.buf, readbuf.len);
 				debuglog("setup send event...\n");
+
 #endif
 			}
 			/* return. !!! */
@@ -658,17 +716,16 @@ void socketmgr_run ()
 			if (!sock)
 				return;
 
-#ifndef WIN32
-			if (current - sock->closetime >= enum_reset_lock_inlinuxtime && !sock->alreadyresetlock)
+			if (current - sock->closetime < enum_list_close_delaytime)
+				return;
+
+#ifdef WIN32
+			if (atom_dec(&sock->ref) != 0)
 			{
-				atom_compare_and_swap(&sock->recvlock, 1, 0);
-				atom_compare_and_swap(&sock->sendlock, 1, 0);
-				sock->alreadyresetlock = true;
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD, sock->connected, sock->deleted);
 			}
 #endif
 
-			if (current - sock->closetime < enum_list_close_delaytime)
-				return;
 			resock = socketmgr_pop_front();
 			assert(resock == sock);
 			if (sock != resock)
@@ -676,14 +733,18 @@ void socketmgr_run ()
 				log_error(" if (sock != resock)");
 				if (resock)
 				{
-					if (resock->recvlock != 0 || resock->sendlock != 0)
-						log_error("%x socket recvlock:%d, sendlock:%d", resock, (int)resock->recvlock, (int)resock->sendlock);
+#ifdef WIN32
+					if (resock->ref != 0)
+						log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", resock, (int)resock->recvlock, (int)resock->sendlock, resock->sockfd, (int)resock->ref, CURRENT_THREAD, resock->connected, resock->deleted);
+#endif
 					socketer_real_release(resock);
 				}
 			}
 
-			if (sock->recvlock != 0 || sock->sendlock != 0)
-				log_error("%x socket recvlock:%d, sendlock:%d", sock, (int)sock->recvlock, (int)sock->sendlock);
+#ifdef WIN32
+			if (sock->ref != 0)
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD, sock->connected, sock->deleted);
+#endif
 			socketer_real_release(sock);
 		}
 	}
