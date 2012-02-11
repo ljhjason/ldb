@@ -34,7 +34,7 @@ extern "C"{
 
 #ifndef FORCEINLINE
   #if defined(__GNUC__)
-#define FORCEINLINE __inline __attribute__ ((always_inline))
+	#define FORCEINLINE __inline __attribute__ ((always_inline))
   #elif defined(_MSC_VER)
     #define FORCEINLINE __forceinline
   #endif
@@ -322,6 +322,18 @@ static FORCEINLINE int pthread_try_lock (spin_struct *sl) {
  *		lock = value;
  *		return old_value;
  * }
+ * function atom_or_fetch(lock, value)
+ * {
+ *		newvalue = lock | value;
+ *		lock = newvalue;
+ *		return newvalue;
+ * }
+ * function atom_and_fetch(lock, value)
+ * {
+ *		newvalue = lock & value;
+ *		lock = newvalue;
+ *		return newvalue;
+ * }
  * */
 
 #ifdef WIN32
@@ -332,6 +344,28 @@ static FORCEINLINE int pthread_try_lock (spin_struct *sl) {
 #define atom_dec InterlockedDecrement
 #define atom_set InterlockedExchange
 
+static FORCEINLINE long atom_or_fetch (volatile long *lock, long value)
+{
+	long old, newvalue;
+	do {
+		old = *lock;
+		newvalue = old | value;
+	} while (InterlockedCompareExchange(lock, newvalue, old) != old);
+
+	return newvalue;
+}
+
+static FORCEINLINE long atom_and_fetch (volatile long *lock, long value)
+{
+	long old, newvalue;
+	do {
+		old = *lock;
+		newvalue = old & value;
+	} while (InterlockedCompareExchange(lock, newvalue, old) != old);
+
+	return newvalue;
+}
+
 #else
 
 #define atom_compare_and_swap __sync_val_compare_and_swap
@@ -339,6 +373,8 @@ static FORCEINLINE int pthread_try_lock (spin_struct *sl) {
 #define atom_inc(lock) __sync_add_and_fetch(lock, 1)
 #define atom_dec(lock) __sync_add_and_fetch(lock, -1)
 #define atom_set __sync_lock_test_and_set
+#define atom_or_fetch __sync_or_and_fetch
+#define atom_and_fetch __sync_and_and_fetch
 
 #endif
 

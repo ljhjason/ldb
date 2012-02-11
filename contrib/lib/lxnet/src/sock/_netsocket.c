@@ -706,47 +706,47 @@ void socketmgr_run ()
 	if (!s_mgr.head)
 		return;
 	current = get_millisecond();
-	if (current - s_mgr.lastrun >= enum_list_run_delay)
+	if (current - s_mgr.lastrun < enum_list_run_delay)
+		return;
+
+	s_mgr.lastrun = current;
+	for (;;)
 	{
 		struct socketer *sock, *resock;
-		s_mgr.lastrun = current;
-		for (;;)
+		sock = s_mgr.head;
+		if (!sock)
+			return;
+
+		if (current - sock->closetime < enum_list_close_delaytime)
+			return;
+
+#ifdef WIN32
+		if (atom_dec(&sock->ref) != 0)
 		{
-			sock = s_mgr.head;
-			if (!sock)
-				return;
-
-			if (current - sock->closetime < enum_list_close_delaytime)
-				return;
-
-#ifdef WIN32
-			if (atom_dec(&sock->ref) != 0)
-			{
-				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD, sock->connected, sock->deleted);
-			}
-#endif
-
-			resock = socketmgr_pop_front();
-			assert(resock == sock);
-			if (sock != resock)
-			{
-				log_error(" if (sock != resock)");
-				if (resock)
-				{
-#ifdef WIN32
-					if (resock->ref != 0)
-						log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", resock, (int)resock->recvlock, (int)resock->sendlock, resock->sockfd, (int)resock->ref, CURRENT_THREAD, resock->connected, resock->deleted);
-#endif
-					socketer_real_release(resock);
-				}
-			}
-
-#ifdef WIN32
-			if (sock->ref != 0)
-				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD, sock->connected, sock->deleted);
-#endif
-			socketer_real_release(sock);
+			log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD, sock->connected, sock->deleted);
 		}
+#endif
+
+		resock = socketmgr_pop_front();
+		assert(resock == sock);
+		if (sock != resock)
+		{
+			log_error(" if (sock != resock)");
+			if (resock)
+			{
+#ifdef WIN32
+				if (resock->ref != 0)
+					log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", resock, (int)resock->recvlock, (int)resock->sendlock, resock->sockfd, (int)resock->ref, CURRENT_THREAD, resock->connected, resock->deleted);
+#endif
+				socketer_real_release(resock);
+			}
+		}
+
+#ifdef WIN32
+		if (sock->ref != 0)
+			log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d, connect:%d, deleted:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD, sock->connected, sock->deleted);
+#endif
+		socketer_real_release(sock);
 	}
 }
 

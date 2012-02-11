@@ -87,16 +87,7 @@ void socket_setup_recvevent (struct socketer *self)
 		log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD);
 	}
 
-	self->events |= EPOLLIN;
-	ev.events = self->events;
-	if (atom_compare_and_swap(&self->sendlock, 1, 1) == 1)
-	{
-		ev.events |= EPOLLOUT;
-	}
-	else
-	{
-		ev.events &= (~(EPOLLOUT));
-	}
+	ev.events = atom_or_fetch(&self->events, EPOLLIN);
 	ev.data.ptr = self;
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
@@ -116,16 +107,14 @@ void socket_remove_recvevent (struct socketer *self)
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 
-	self->events &= (~(EPOLLIN));
-	ev.events = self->events;
-	if (atom_compare_and_swap(&self->sendlock, 1, 1) == 1)
+	assert(self->recvlock == 1);
+
+	if (self->recvlock != 1)
 	{
-		ev.events |= EPOLLOUT;
+		log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD);
 	}
-	else
-	{
-		ev.events &= (~(EPOLLOUT));
-	}
+
+	ev.events = atom_and_fetch(&self->events, ~(EPOLLIN));
 	ev.data.ptr = self;
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
@@ -147,16 +136,7 @@ void socket_setup_sendevent (struct socketer *self)
 		log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD);
 	}
 
-	self->events |= EPOLLOUT;
-	ev.events = self->events;
-	if (atom_compare_and_swap(&self->recvlock, 1, 1) == 1)
-	{
-		ev.events |= EPOLLIN;
-	}
-	else
-	{
-		ev.events &= (~(EPOLLIN));
-	}
+	ev.events = atom_or_fetch(&self->events, EPOLLOUT);
 	ev.data.ptr = self;
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
@@ -176,16 +156,13 @@ void socket_remove_sendevent (struct socketer *self)
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 
-	self->events &= (~(EPOLLOUT));
-	ev.events = self->events;
-	if (atom_compare_and_swap(&self->recvlock, 1, 1) == 1)
+	assert(self->sendlock == 1);
+	if (self->sendlock != 1)
 	{
-		ev.events |= EPOLLIN;
+		log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", self, (int)self->recvlock, (int)self->sendlock, self->sockfd, (int)self->ref, CURRENT_THREAD);
 	}
-	else
-	{
-		ev.events &= (~(EPOLLIN));
-	}
+
+	ev.events = atom_and_fetch(&self->events, ~(EPOLLOUT));
 	ev.data.ptr = self;
 	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
 	{
@@ -230,12 +207,22 @@ static int task_func (void *argv)
 		/* can read event. */
 		if (ev->events & EPOLLIN)
 		{
+			if (sock->recvlock != 1)
+			{
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD);
+			}
+				
 			socketer_on_recv(sock, 0);
 		}
 
 		/* can write event. */
 		if (ev->events & EPOLLOUT)
 		{
+			if (sock->sendlock != 1)
+			{
+				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD);
+			}
+
 			socketer_on_send(sock, 0);
 		}
 	}
