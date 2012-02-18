@@ -51,7 +51,7 @@ void socket_addto_eventmgr (struct socketer *self)
 	memset(&ev, 0, sizeof(ev));
 	ev.events = self->events;
 	ev.data.ptr = self;
-	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_ADD, self->sockfd, &ev))
+	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_ADD, self->sockfd, &ev) == -1)
 	{
 		/*log_error("epoll, add event to epoll set on fd %d error!, errno:%d", ev.data.fd, NET_GetLastError());*/
 		socketer_close(self);
@@ -66,7 +66,7 @@ void socket_removefrom_eventmgr (struct socketer *self)
 	memset(&ev, 0, sizeof(ev));
 	self->events = 0;
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP;
-	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_DEL, self->sockfd, &ev))
+	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_DEL, self->sockfd, &ev) == -1)
 	{
 		/*log_error("epoll, not remove fd %d from epoll set, error!, errno:%d", ev.data.fd, NET_GetLastError());*/
 	}
@@ -89,7 +89,7 @@ void socket_setup_recvevent (struct socketer *self)
 
 	ev.events = atom_or_fetch(&self->events, EPOLLIN);
 	ev.data.ptr = self;
-	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
+	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev) == -1)
 	{
 		/*log_error("epoll, setup recv event to epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
 		socketer_close(self);
@@ -116,7 +116,7 @@ void socket_remove_recvevent (struct socketer *self)
 
 	ev.events = atom_and_fetch(&self->events, ~(EPOLLIN));
 	ev.data.ptr = self;
-	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
+	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev) == -1)
 	{
 		/*log_error("epoll, remove recv event from epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
 		socketer_close(self);
@@ -138,7 +138,7 @@ void socket_setup_sendevent (struct socketer *self)
 
 	ev.events = atom_or_fetch(&self->events, EPOLLOUT);
 	ev.data.ptr = self;
-	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
+	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev) == -1)
 	{
 		/*log_error("epoll, setup send event to epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
 		socketer_close(self);
@@ -164,7 +164,7 @@ void socket_remove_sendevent (struct socketer *self)
 
 	ev.events = atom_and_fetch(&self->events, ~(EPOLLOUT));
 	ev.data.ptr = self;
-	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev))
+	if (epoll_ctl(s_mgr->epoll_fd, EPOLL_CTL_MOD, self->sockfd, &ev) == -1)
 	{
 		/*log_error("epoll, remove send event from epoll set on fd %d error!, errno:%d", self->sockfd, NET_GetLastError());*/
 		socketer_close(self);
@@ -207,22 +207,14 @@ static int task_func (void *argv)
 		/* can read event. */
 		if (ev->events & EPOLLIN)
 		{
-			if (sock->recvlock != 1)
-			{
-				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD);
-			}
-				
+			atom_set(&sock->recvlock, 1);
 			socketer_on_recv(sock, 0);
 		}
 
 		/* can write event. */
 		if (ev->events & EPOLLOUT)
 		{
-			if (sock->sendlock != 1)
-			{
-				log_error("%x socket recvlock:%d, sendlock:%d, fd:%d, ref:%d, thread_id:%d", sock, (int)sock->recvlock, (int)sock->sendlock, sock->sockfd, (int)sock->ref, CURRENT_THREAD);
-			}
-
+			atom_set(&sock->sendlock, 1);
 			socketer_on_send(sock, 0);
 		}
 	}

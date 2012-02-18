@@ -493,7 +493,7 @@ static inline char *blocklist_getmessage (struct blocklist *lst, char *buf, bool
 		lst->isnewmsg = true;
 	}
 	/* check packet length. */
-	if ((lst->msglen < sizeof(lst->msglen)) || (lst->msglen >= _MAX_MSG_LEN))
+	if ((lst->msglen < (int)sizeof(lst->msglen)) || (lst->msglen >= (int)_MAX_MSG_LEN))
 	{
 		*needclose = true;
 		assert(false && "if ((lst->msglen < sizeof(lst->msglen)) || (lst->msglen >= _MAX_MSG_LEN))");

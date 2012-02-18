@@ -55,9 +55,7 @@ static inline struct bufinfo block_get_encrypt (struct block *self)
 
 static inline bool block_is_full (struct block *self)
 {
-	assert(self->maxsize > self->write);
-	assert(self->write >= self->read);
-	return ((self->read == self->write) && (self->write == (self->maxsize - 1)));
+	return ((self->read == (self->maxsize - 1)) && (self->write == (self->maxsize - 1)));
 }
 
 static inline size_t block_getreadsize (struct block *self)
@@ -131,26 +129,6 @@ static inline size_t block_get (struct block *self, void *data, size_t len)
 	self->read += readsize;
 	assert(self->read <= self->write);
 	return readsize;
-}
-
-static inline void block_move (struct block *self)
-{
-	assert(self != NULL);
-	assert(self->maxsize > self->write);
-	assert(self->write >= self->read);
-	if (self->read == 0)
-		return;
-	if (self->read == self->write)
-	{
-		self->read = 0;
-		self->write = 0;
-	}
-	else
-	{
-		memmove(&self->buf[0], &self->buf[self->read], self->write - self->read);
-		self->write -= self->read;	/* first set the write position, and then clear the read position. */
-		self->read = 0;
-	}
 }
 
 static inline bool block_init (struct block *self, size_t size)

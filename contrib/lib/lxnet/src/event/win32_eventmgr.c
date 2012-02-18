@@ -182,7 +182,7 @@ static void _iocp_thread_run (void *data)
 		len = 0;
 		res = GetQueuedCompletionStatus(cp, &len, &s, &ol_ptr, INFINITE/*10000*/);
 		debuglog("res:%d, ol_ptr:%x, s:%x\n", res, ol_ptr, s);
-		if ((ol_ptr)&&(s))		
+		if ((ol_ptr) && (s))
 		{
 			ov = CONTAINING_RECORD(ol_ptr, struct overlappedstruct, m_overlap);
 			switch (ov->m_event)

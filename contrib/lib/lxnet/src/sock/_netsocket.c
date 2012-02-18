@@ -21,12 +21,7 @@
 #define debuglog(...)
 #endif
 
-
-/*
-(Note!)
-  0 bytes WSASend delivery, will directly receive, he would not do to write test
-  WSARecv delivery 0 bytes, received the test can be done.
- */
+static const int s_datalimit = 32*1024;
 
 enum e_control_value
 {
@@ -589,9 +584,9 @@ void socketer_on_recv (struct socketer *self, int len)
 			else
 			{
 #ifdef WIN32
-				/* if > 1, then set is 1. */
-				if (writebuf.len > 1)
-					writebuf.len = 1;
+				/* if > s_datalimit, then set is s_datalimit. */
+				if (writebuf.len > s_datalimit)
+					writebuf.len = s_datalimit;
 
 				/* set recv event. */
 				socket_recvdata(self, writebuf.buf, writebuf.len);
@@ -614,11 +609,14 @@ void socketer_on_send (struct socketer *self, int len)
 
 	assert(self->sendlock == 1);
 	assert(len >= 0);
+
+#ifdef WIN32
 	if (len > 0)
 	{
 		buf_addread(self->sendbuf, len);
 		debuglog("send :%d size\n", len);
 	}
+#endif
 	
 	/* do something before real send. */
 	buf_send_before_do(self->sendbuf);
@@ -670,9 +668,9 @@ void socketer_on_send (struct socketer *self, int len)
 			else
 			{
 #ifdef WIN32
-				/* if > 1, then set is 1. */
-				if (readbuf.len > 1)
-					readbuf.len = 1;
+				/* if > s_datalimit, then set is s_datalimit. */
+				if (readbuf.len > s_datalimit)
+					readbuf.len = s_datalimit;
 
 				/* set send data, because WSASend 0 size data, not check can send. */
 				socket_senddata(self, readbuf.buf, readbuf.len);
