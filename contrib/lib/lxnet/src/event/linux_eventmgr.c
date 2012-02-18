@@ -207,14 +207,20 @@ static int task_func (void *argv)
 		/* can read event. */
 		if (ev->events & EPOLLIN)
 		{
-			atom_set(&sock->recvlock, 1);
+			if (atom_compare_and_swap(&sock->recvlock, 0, 1) == 0)
+			{
+				atom_inc(&sock->ref);
+			}
 			socketer_on_recv(sock, 0);
 		}
 
 		/* can write event. */
 		if (ev->events & EPOLLOUT)
 		{
-			atom_set(&sock->sendlock, 1);
+			if (atom_compare_and_swap(&sock->sendlock, 0, 1) == 0)
+			{
+				atom_inc(&sock->ref);
+			}
 			socketer_on_send(sock, 0);
 		}
 	}
