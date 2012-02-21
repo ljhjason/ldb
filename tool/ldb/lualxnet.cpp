@@ -492,6 +492,13 @@ static int luasocketer_sendmsg (lua_State *L)
 	return 1;
 }
 
+static int luasocketer_sendpolicydata (lua_State *L)
+{
+	Socketer *sock = get_socketer(L, 1);
+	lua_pushboolean(L, sock->SendPolicyData());
+	return 1;
+}
+
 static int luasocketer_getmsg (lua_State *L)
 {
 	Socketer *sock = get_socketer(L, 1);
@@ -543,6 +550,7 @@ static const struct luaL_reg class_socketer_function[] = {
 	{"isclose", luasocketer_isclose},
 	{"getip", luasocketer_getip},
 	{"sendmsg", luasocketer_sendmsg},
+	{"sendpolicydata", luasocketer_sendpolicydata},
 	{"getmsg", luasocketer_getmsg},
 	{"getmsg_ldb", luasocketer_getmsg_ldb},
 	{"realsend", luasocketer_realsend},
