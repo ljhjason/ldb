@@ -261,6 +261,29 @@ static int lua_parseint64 (lua_State *L)
 	return 2;
 }
 
+static int lua_bit_or (lua_State *L)
+{
+	int64 v1 = (int64)luaL_checknumber(L, 1);
+	int64 v2 = (int64)luaL_checknumber(L, 2);
+	lua_pushnumber(L, v1 | v2);
+	return 1;
+}
+
+static int lua_bit_and (lua_State *L)
+{
+	int64 v1 = (int64)luaL_checknumber(L, 1);
+	int64 v2 = (int64)luaL_checknumber(L, 2);
+	lua_pushnumber(L, v1 & v2);
+	return 1;
+}
+
+static int lua_bit_negate (lua_State *L)
+{
+	int64 v = (int64)luaL_checknumber(L, 1);
+	lua_pushnumber(L, ~v);
+	return 1;
+}
+
 static const struct luaL_reg g_function[] = {
 	{"forlua_dgetinfo", lua_forlua_dgetinfo},
 	{"create_guid", lua_create_guid},
@@ -276,6 +299,9 @@ static const struct luaL_reg g_function[] = {
 	{"log_error", lua_log_error},
 	{"makeint64by32", lua_makeint64by32},
 	{"parseint64", lua_parseint64},
+	{"bit_or", lua_bit_or},
+	{"bit_and", lua_bit_and},
+	{"bit_negate", lua_bit_negate},
 	{0, 0}
 };
 
