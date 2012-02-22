@@ -26,6 +26,7 @@
 struct fileinfo
 {
 	FILE *fp;
+	bool logtime;
 	char last_filename[256];
 };
 
@@ -62,6 +63,7 @@ static void filelog_init (struct filelog *self)
 	for (i = 0; i < enum_log_type_max; ++i)
 	{
 		self->loggroup[i].fp = NULL;
+		self->loggroup[i].logtime = true;
 		memset(self->loggroup[i].last_filename, 0, sizeof(self->loggroup[i].last_filename));
 	}
 }
@@ -91,6 +93,17 @@ void filelog_release (struct filelog *self)
 	}
 	self->isfree = true;
 	free(self);
+}
+
+bool filelog_logtime (struct filelog *self, bool flag)
+{
+	bool prev;
+	if (!self)
+		return true;
+
+	prev = self->loggroup[enum_log_type_log].logtime;
+	self->loggroup[enum_log_type_log].logtime = flag;
+	return prev;
 }
 
 int mymkdir (const char *directname)
@@ -246,12 +259,13 @@ void _log_write_ (struct filelog *log, unsigned int type, const char *filename, 
 		va_list args;
 		if (enum_log_type_log == type)
 		{
-			fprintf(info->fp, "[%s %02d:%02d:%02d]  ",	szDate,
-			currTM->tm_hour, currTM->tm_min, currTM->tm_sec);
+			if (info->logtime)
+				fprintf(info->fp, "[%s %02d:%02d:%02d]  ",	szDate,
+				currTM->tm_hour, currTM->tm_min, currTM->tm_sec);
 		}
 		else
 		{
-			fprintf(info->fp, "[%d/%02d/%02d %02d:%02d:%02d]  file:%s, function:%s, line:%ld ", 
+			fprintf(info->fp, "[%d/%02d/%02d %02d:%02d:%02d] [file:%s, function:%s, line:%ld] ", 
 			currTM->tm_year+1900, currTM->tm_mon+1, currTM->tm_mday, currTM->tm_hour, currTM->tm_min, currTM->tm_sec, 
 			filename, func,	line);
 		}
@@ -269,6 +283,17 @@ void _log_write_ (struct filelog *log, unsigned int type, const char *filename, 
 #endif	
 		fflush(info->fp);
 	}
+}
+
+bool log_logtime (bool flag)
+{
+	bool prev;
+	if (!s_log.isinit)
+		logmgr_init();
+
+	prev = s_log.logobj.loggroup[enum_log_type_log].logtime;
+	s_log.logobj.loggroup[enum_log_type_log].logtime = flag;
+	return prev;
 }
 
 static void _setloginfo_ (struct filelog *log, const char *directname)

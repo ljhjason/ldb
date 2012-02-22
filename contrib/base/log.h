@@ -78,6 +78,8 @@ void _log_setdirect_ (struct filelog *log, const char *directname);
 
 #define log_setdirect(name) _log_setdirect_(((struct filelog *) 0), (name))
 
+bool log_logtime (bool flag);
+
 #define log_writelog(...) _log_write_(((struct filelog *) 0), enum_log_type_log, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #define log_error(...) _log_write_(((struct filelog *) 0), enum_log_type_error, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
@@ -86,6 +88,8 @@ void _log_setdirect_ (struct filelog *log, const char *directname);
 struct filelog *filelog_create ();
 
 void filelog_release (struct filelog *self);
+
+bool filelog_logtime (struct filelog *self, bool flag);
 
 #define filelog_setdirect(log, name) _log_setdirect_((log), (name))
 

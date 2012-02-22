@@ -223,6 +223,12 @@ static int lua_log_setdirectory (lua_State *L)
 	return 0;
 }
 
+static int lua_log_logtime (lua_State *L)
+{
+	lua_pushboolean(L, log_logtime(lua_toboolean(L, 1)));
+	return 1;
+}
+
 static int lua_log_writelog (lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -232,8 +238,12 @@ static int lua_log_writelog (lua_State *L)
 
 static int lua_log_error (lua_State *L)
 {
+	lua_Debug ar;
 	const char *str = luaL_checkstring(L, 1);
-	log_error("%s", str);
+	if (!lua_getstack(L, 1, &ar) || !lua_getinfo(L, "Sln", &ar))
+		log_error("%s", str);
+	else
+		_log_write_(((struct filelog *) 0), enum_log_type_error, ar.source, ar.name ? ar.name : "", ar.currentline, "%s", str);
 	return 0;
 }
 
@@ -295,6 +305,7 @@ static const struct luaL_reg g_function[] = {
 	{"getcurrentpath", lua_getcurrentpath},
 	{"iswindows", lua_iswindows},
 	{"log_setdirectory", lua_log_setdirectory},
+	{"log_logtime", lua_log_logtime},
 	{"log_writelog", lua_log_writelog},
 	{"log_error", lua_log_error},
 	{"makeint64by32", lua_makeint64by32},
@@ -917,6 +928,13 @@ static int luafilelog_release (lua_State *L)
 	return 0;
 }
 
+static int luafilelog_logtime (lua_State *L)
+{
+	struct filelog *log = get_filelog(L, 1);
+	lua_pushboolean(L, filelog_logtime(log, lua_toboolean(L, 2)));
+	return 1;
+}
+
 static int luafilelog_setdirectory (lua_State *L)
 {
 	struct filelog *log = get_filelog(L, 1);
@@ -935,9 +953,13 @@ static int luafilelog_writelog (lua_State *L)
 
 static int luafilelog_error (lua_State *L)
 {
+	lua_Debug ar;
 	struct filelog *log = get_filelog(L, 1);
 	const char *str = luaL_checkstring(L, 2);
-	filelog_error(log, "%s", str);
+	if (!lua_getstack(L, 1, &ar) || !lua_getinfo(L, "Sln", &ar))
+		filelog_error(log, "%s", str);
+	else
+		_log_write_(log, enum_log_type_error, ar.source, ar.name ? ar.name : "", ar.currentline, "%s", str);
 	return 0;
 }
 
@@ -951,6 +973,7 @@ static int luafilelog_mkdir (lua_State *L)
 static const struct luaL_reg class_filelog_function[] = {
 	{"create", luafilelog_create},
 	{"release", luafilelog_release},
+	{"logtime", luafilelog_logtime},
 	{"setdirectory", luafilelog_setdirectory},
 	{"writelog", luafilelog_writelog},
 	{"error", luafilelog_error},
