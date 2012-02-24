@@ -545,6 +545,9 @@ local function loop_print_var(var, value, pnum)
 		if sfind(name, "%d") == 1 then
 			name = tonumber(name)
 		end
+		if not value then
+			return false
+		end
 		if not value[name] then
 			if dep_num == 1 then
 				return false
@@ -563,8 +566,12 @@ local function loop_print_var(var, value, pnum)
 					value = value[name]
 				end
 			else
-				localpushstring(sformat("%s = %s    [type:%s]", var, tostring(value[name]), type(value[name])))
-				find = true
+				if end_pos - 1 == len then
+					localpushstring(sformat("%s = %s    [type:%s]", var, tostring(value[name]), type(value[name])))
+					find = true
+				else
+					find = false
+				end
 				break
 			end
 		end
@@ -610,6 +617,7 @@ local function debug_print_expr(var, pnum, depnum)
 
 				if name == first_name then
 					find = loop_print_var(var,value, pnum)
+					break
 				end
 			end
 		end		
