@@ -1123,6 +1123,7 @@ static void on_ctrl_hander (int sig)
 	{
 		//log_error("do lua function failed!, function:[%s] error:%s", functionname, luaL_checkstring(s_L, -1));
 		lua_pop(s_L, 1);
+		exit(0);
 	}
 	signal(SIGINT, on_ctrl_hander);
 }
