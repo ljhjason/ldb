@@ -187,6 +187,12 @@ static int lua_get_millisecond (lua_State *L)
 	return 1;
 }
 
+static int lua_get_microsecond (lua_State *	L)
+{
+	lua_pushnumber(L, (lua_Number )get_microsecond());
+	return 1;
+}
+
 static int lua_getfullname (lua_State *L)
 {
 	char buf[1024*8] = {0};
@@ -300,6 +306,7 @@ static const struct luaL_reg g_function[] = {
 	{"hasstr", lua_hasstr},
 	{"rand", lua_krand},
 	{"delay", lua_delay},
+	{"getmicrosecond", lua_get_microsecond},
 	{"getmillisecond", lua_get_millisecond},
 	{"getfilefullname", lua_getfullname},
 	{"getcurrentpath", lua_getcurrentpath},
