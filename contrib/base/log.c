@@ -281,7 +281,8 @@ void _log_write_ (struct filelog *log, unsigned int type, const char *filename, 
 		begin = get_microsecond();
 		fprintf(info->fp, "fflush need:%ld us\n", (long)(begin - end));
 #endif	
-		fflush(info->fp);
+		if (type != enum_log_type_log)
+			fflush(info->fp);
 	}
 }
 
