@@ -20,7 +20,8 @@
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
-#define my_mkdir(a) mkdir((a), 0777)
+#include <unistd.h>
+#define my_mkdir(a) mkdir((a), 0755)
 #endif
 
 struct fileinfo
@@ -108,7 +109,40 @@ bool filelog_logtime (struct filelog *self, bool flag)
 
 int mymkdir (const char *directname)
 {
-	return my_mkdir(directname);
+	int i, len;
+	char tmp[1024*8] = {0};
+	if (!strncpy(tmp, directname, sizeof(tmp) - 1))
+		return -1;
+	tmp[sizeof(tmp) - 1] = '\0';
+	len = strlen(tmp);
+	if (len >= sizeof(tmp) - 1)
+		return -2;
+	if (tmp[len - 1] != '/')
+	{
+		tmp[len] = '/';
+		tmp[len + 1] = '\0';
+		len += 1;
+	}
+
+	if (tmp[0] == '.')
+		i = 1;
+	else
+		i = 0;
+
+	for (i += 1; i < len; ++i)
+	{
+		if (tmp[i] != '/')
+			continue;
+
+		tmp[i] = '\0';
+		if (access(tmp, F_OK) != 0)
+		{
+			if (my_mkdir(tmp) < 0)
+				return -3;
+		}
+		tmp[i] = '/';
+	}
+	return 0;
 }
 
 /* log write file spend time */
@@ -212,13 +246,13 @@ void _log_write_ (struct filelog *log, unsigned int type, const char *filename, 
 	{
 	case enum_log_type_assert:
 		{
-			my_mkdir(directname);
+			mymkdir(directname);
 			snprintf(szFile, sizeof(szFile)-1, "%s/%s", directname, s_default_filename[type]);
 		}
 		break;
 	case enum_log_type_error:
 		{
-			my_mkdir(directname);
+			mymkdir(directname);
 			snprintf(szFile, sizeof(szFile)-1, "%s/%s", directname, s_default_filename[type]);
 		}
 		break;
@@ -226,8 +260,7 @@ void _log_write_ (struct filelog *log, unsigned int type, const char *filename, 
 		{
 			snprintf(szDate, sizeof(szDate)-1, "%04d-%02d-%02d", currTM->tm_year+1900, currTM->tm_mon+1, currTM->tm_mday);
 			snprintf(szPath, sizeof(szPath)-1, "%s/%s", directname, szDate);
-			my_mkdir(directname);
-			my_mkdir(szPath);
+			mymkdir(szPath);
 			snprintf(szFile, sizeof(szFile)-1, "%s/%02d.log", szPath, currTM->tm_hour);
 		}
 		break;
