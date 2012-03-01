@@ -145,7 +145,11 @@ int mymkdir (const char *directname)
 			continue;
 
 		tmp[i] = '\0';
+#ifdef WIN32
+		if (access(tmp, 0) != 0)
+#else
 		if (access(tmp, F_OK) != 0)
+#endif
 		{
 			if (my_mkdir(tmp) < 0)
 				return -3;
