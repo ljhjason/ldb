@@ -28,6 +28,7 @@ struct fileinfo
 {
 	FILE *fp;
 	bool logtime;
+	bool everyflush;
 	char last_filename[256];
 };
 
@@ -65,6 +66,7 @@ static void filelog_init (struct filelog *self)
 	{
 		self->loggroup[i].fp = NULL;
 		self->loggroup[i].logtime = true;
+		self->loggroup[i].everyflush = true;
 		memset(self->loggroup[i].last_filename, 0, sizeof(self->loggroup[i].last_filename));
 	}
 }
@@ -105,6 +107,14 @@ bool filelog_logtime (struct filelog *self, bool flag)
 	prev = self->loggroup[enum_log_type_log].logtime;
 	self->loggroup[enum_log_type_log].logtime = flag;
 	return prev;
+}
+
+void filelog_everyflush (struct filelog *self, bool flag)
+{
+	if (!self)
+		return;
+
+	self->loggroup[enum_log_type_log].everyflush = flag;
 }
 
 int mymkdir (const char *directname)
@@ -313,8 +323,9 @@ void _log_write_ (struct filelog *log, unsigned int type, const char *filename, 
 		fflush(info->fp);
 		begin = get_microsecond();
 		fprintf(info->fp, "fflush need:%ld us\n", (long)(begin - end));
-#endif	
-		if (type != enum_log_type_log)
+#endif
+
+		if (info->everyflush)
 			fflush(info->fp);
 	}
 }
@@ -328,6 +339,14 @@ bool log_logtime (bool flag)
 	prev = s_log.logobj.loggroup[enum_log_type_log].logtime;
 	s_log.logobj.loggroup[enum_log_type_log].logtime = flag;
 	return prev;
+}
+
+void log_everyflush (bool flag)
+{
+	if (!s_log.isinit)
+		logmgr_init();
+
+	s_log.logobj.loggroup[enum_log_type_log].everyflush = flag;
 }
 
 static void _setloginfo_ (struct filelog *log, const char *directname)

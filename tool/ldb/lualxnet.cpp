@@ -235,6 +235,12 @@ static int lua_log_logtime (lua_State *L)
 	return 1;
 }
 
+static int lua_log_everyflush (lua_State *L)
+{
+	log_everyflush(lua_toboolean(L, 1));
+	return 0;
+}
+
 static int lua_log_writelog (lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -313,6 +319,7 @@ static const struct luaL_reg g_function[] = {
 	{"iswindows", lua_iswindows},
 	{"log_setdirectory", lua_log_setdirectory},
 	{"log_logtime", lua_log_logtime},
+	{"log_everyflush", lua_log_everyflush},
 	{"log_writelog", lua_log_writelog},
 	{"log_error", lua_log_error},
 	{"makeint64by32", lua_makeint64by32},
@@ -942,6 +949,13 @@ static int luafilelog_logtime (lua_State *L)
 	return 1;
 }
 
+static int luafilelog_everyflush (lua_State *L)
+{
+	struct filelog *log = get_filelog(L, 1);
+	filelog_everyflush(log, lua_toboolean(L, 2));
+	return 0;
+}
+
 static int luafilelog_setdirectory (lua_State *L)
 {
 	struct filelog *log = get_filelog(L, 1);
@@ -981,6 +995,7 @@ static const struct luaL_reg class_filelog_function[] = {
 	{"create", luafilelog_create},
 	{"release", luafilelog_release},
 	{"logtime", luafilelog_logtime},
+	{"everyflush", luafilelog_everyflush},
 	{"setdirectory", luafilelog_setdirectory},
 	{"writelog", luafilelog_writelog},
 	{"error", luafilelog_error},
