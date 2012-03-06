@@ -94,8 +94,6 @@ static const char chKey = 0xae;
 static void default_decrypt_func (void *logicdata, char *buf, int len)
 {
 	int i;
-	if (len <= 0)
-		return;
 	for (i = 0; i < len; i++) 
 	{
 		buf[i] ^= chKey;
@@ -105,8 +103,6 @@ static void default_decrypt_func (void *logicdata, char *buf, int len)
 static void default_encrypt_func (void *logicdata, char *buf, int len)
 {
 	int i;
-	if (len <= 0)
-		return;
 	for (i = 0; i < len; i++)
 	{
 		buf[i] ^= chKey;
