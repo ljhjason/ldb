@@ -650,6 +650,7 @@ static int luapacket_reset (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
 	pack->ResetMsgLength();
+	pack->SetType(-1);
 	return 0;
 }
 
