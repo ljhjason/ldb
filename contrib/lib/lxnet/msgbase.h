@@ -180,6 +180,18 @@ struct MessagePack:public Msg
 		header.msglength += sizeof(data);
 	}
 
+	void PushDouble(double data)
+	{
+		if ((m_index + sizeof(data)) >= e_thismessage_max_size)
+		{
+			assert(false && "error!");
+			return;
+		}
+		memcpy(&m_buf[m_index], &data, sizeof(data));
+		m_index += sizeof(data);
+		header.msglength += sizeof(data);
+	}
+
 	bool GetBlock(void *data, size_t size)
 	{
 		if ((size == 0 ) || (size >= e_thismessage_max_size))
@@ -273,6 +285,19 @@ struct MessagePack:public Msg
 			return (float)0.0;
 		}
 		float temp;
+		memcpy(&temp, &m_buf[m_index], sizeof(temp));
+		m_index += sizeof(temp);
+		return temp;
+	}
+
+	double GetDouble()
+	{
+		if (m_index + sizeof(double) > (size_t)m_maxindex)
+		{
+			assert(false && "error!");
+			return (double)0.0;
+		}
+		double temp;
 		memcpy(&temp, &m_buf[m_index], sizeof(temp));
 		m_index += sizeof(temp);
 		return temp;
