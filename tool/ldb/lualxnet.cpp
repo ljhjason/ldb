@@ -231,12 +231,14 @@ static int lua_log_setdirectory (lua_State *L)
 
 static int lua_log_logtime (lua_State *L)
 {
+	luaL_argcheck(L, lua_isboolean(L, 1), 1, "boolean expected");
 	lua_pushboolean(L, log_logtime(lua_toboolean(L, 1)));
 	return 1;
 }
 
 static int lua_log_everyflush (lua_State *L)
 {
+	luaL_argcheck(L, lua_isboolean(L, 1), 1, "boolean expected");
 	log_everyflush(lua_toboolean(L, 1));
 	return 0;
 }
@@ -946,6 +948,7 @@ static int luafilelog_release (lua_State *L)
 static int luafilelog_logtime (lua_State *L)
 {
 	struct filelog *log = get_filelog(L, 1);
+	luaL_argcheck(L, lua_isboolean(L, 2), 2, "boolean expected");
 	lua_pushboolean(L, filelog_logtime(log, lua_toboolean(L, 2)));
 	return 1;
 }
@@ -953,6 +956,7 @@ static int luafilelog_logtime (lua_State *L)
 static int luafilelog_everyflush (lua_State *L)
 {
 	struct filelog *log = get_filelog(L, 1);
+	luaL_argcheck(L, lua_isboolean(L, 2), 2, "boolean expected");
 	filelog_everyflush(log, lua_toboolean(L, 2));
 	return 0;
 }
