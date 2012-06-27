@@ -89,8 +89,18 @@ bool socket_setopt_for_connect (net_socket sockfd)
 	return true;
 }
 
+static bool set_reuseaddr (net_socket fd)
+{
+#ifdef WIN32
+	return true;
+#else
+	int reuseaddr = 1;
+	return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &reuseaddr, sizeof(int)) != -1;
+#endif
+}
+
 bool socket_setopt_for_listen (net_socket sockfd)
 {
-	return socket_set_nonblock(sockfd);
+	return socket_set_nonblock(sockfd) && set_reuseaddr(sockfd);
 }
 
