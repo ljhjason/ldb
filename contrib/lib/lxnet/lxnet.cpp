@@ -4,6 +4,7 @@
  * lcinx@163.com
 */
 
+#include <stdio.h>
 #include <string.h>
 #include "ossome.h"
 #include "net_module.h"
@@ -12,6 +13,11 @@
 #include "pool.h"
 #include "msgbase.h"
 #include "log.h"
+
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
+
 struct infomgr
 {
 	bool isinit;
@@ -140,6 +146,11 @@ void Socketer::UseDecrypt ()
 	socketer_use_decrypt(m_self);
 }
 
+/* 启用TGW接入 */
+void Socketer::UseTGW ()
+{
+	socketer_use_tgw(m_self);
+}
 
 /* 关闭用于连接的socket对象*/
 void Socketer::Close ()
@@ -221,7 +232,24 @@ bool Socketer::SendPolicyData ()
 		Close();
 		return false;
 	}
-	return socketer_sendmsg(m_self, buf, datasize+1);
+	return socketer_sendmsg(m_self, buf, datasize + 1);
+}
+
+/* 发送TGW信息头 */
+bool Socketer::SendTGWInfo (const char *domain, int port)
+{
+	char buf[1024] = {};
+	size_t datasize;
+	snprintf(buf, sizeof(buf) - 1, "tgw_l7_forward\r\nHost: %s:%d\r\n\r\n", domain, port);
+	buf[sizeof(buf) - 1] = '\0';
+	datasize = strlen(buf);
+	if (socketer_send_islimit(m_self, datasize))
+	{
+		Close();
+		return false;
+	}
+	socketer_set_raw_datasize(m_self, datasize);
+	return socketer_sendmsg(m_self, buf, datasize);
 }
 
 /* 触发真正的发送数据*/

@@ -45,6 +45,11 @@ struct net_buf
 	bool isbigbuf;				/* big or small flag. */
 	char compress_falg;
 	char crypt_falg;
+	bool use_tgw;
+	bool already_do_tgw;
+
+	size_t raw_size_for_encrypt;
+	size_t raw_size_for_compress;
 
 	dofunc_f dofunc;
 	void *do_logicdata;
@@ -178,6 +183,11 @@ static void buf_init (struct net_buf *self, bool isbigbuf)
 	self->isbigbuf = isbigbuf;
 	self->compress_falg = enum_unknow;
 	self->crypt_falg = enum_unknow;
+	self->use_tgw = false;
+	self->already_do_tgw = false;
+
+	self->raw_size_for_encrypt = 0;
+	self->raw_size_for_compress = 0;
 
 	self->dofunc = NULL;
 	self->do_logicdata = NULL;
@@ -264,6 +274,21 @@ void buf_usedecrypt (struct net_buf *self)
 	if (!self)
 		return;
 	self->crypt_falg = enum_decrypt;
+}
+
+void buf_use_tgw (struct net_buf *self)
+{
+	if (!self)
+		return;
+	self->use_tgw = true;
+}
+
+void buf_set_raw_datasize (struct net_buf *self, size_t size)
+{
+	if (!self)
+		return;
+	self->raw_size_for_encrypt = size;
+	self->raw_size_for_compress = size;
 }
 
 /* push len, if is more than the limit, return true.*/
@@ -392,22 +417,101 @@ static inline void blocklist_addwrite (struct blocklist *lst, int len)
 	atom_fetch_add(&lst->datasize, len);
 }
 
+static inline void blocklist_addread (struct blocklist *lst, int len)
+{
+	int tmpsize;
+	assert(lst != NULL);
+
+	/* first change datasize. */
+	atom_fetch_add(&lst->datasize, (-len));
+
+	while (len > 0)
+	{
+		tmpsize = min(block_getreadsize(lst->head), len);
+
+		/* add block read position. */
+		block_addread(lst->head, tmpsize);
+
+		/* test free. */
+		buf_test_and_freeblock(lst);
+
+		len -= tmpsize;
+	}
+}
+
+static bool buf_try_parse_tgw (struct blocklist *lst, char **buf, int *len)
+{
+	char tgwbuf[] = "\r\n\r\n";
+	int findidx = 0;
+	struct block *bk;
+	int num = 0;
+	int i;
+	int canreadsize;
+	char *f;
+	for (bk = lst->head; bk; bk = bk->next)
+	{
+		f = block_getreadbuf(bk);
+		canreadsize = block_getreadsize(bk);
+		for (i = 0; i < canreadsize; ++i)
+		{
+			if (f[i] == tgwbuf[findidx])
+				findidx++;
+			else
+				findidx = 0;
+
+			num++;
+			if (findidx == 4)
+			{
+				blocklist_addread(lst, num);
+				if (i + 1 < canreadsize)
+				{
+					*buf = &f[i + 1];
+					*len = canreadsize - (i + 1);
+				}
+				else
+				{
+					*buf = NULL;
+					*len = 0;
+				}
+				return true;
+			}
+		}
+	}
+
+	*buf = NULL;
+	*len = 0;
+	return false;
+}
+
 /* add write position. */
 void buf_addwrite (struct net_buf *self, char *buf, int len)
 {
+	char *tmpbuf = buf;
+	int newlen = len;
+	struct blocklist *lst;
 	assert(len > 0);
 	if (!self)
 		return;
 
+	if (buf_is_use_uncompress(self))
+		lst = &self->iolist;
+	else
+		lst = &self->logiclist;
+
+	blocklist_addwrite(lst, len);
+
+	if (self->use_tgw && (!self->already_do_tgw))
+	{
+		if (buf_try_parse_tgw(lst, &tmpbuf, &newlen))
+			self->already_do_tgw = true;
+	}
+
 	/* decrypt opt. */
 	if (buf_is_use_decrypt(self))
 	{
-		self->dofunc(self->do_logicdata, buf, len);
+		if (tmpbuf && (newlen > 0))
+			self->dofunc(self->do_logicdata, tmpbuf, newlen);
 	}
-	if (buf_is_use_uncompress(self))
-		blocklist_addwrite(&self->iolist, len);
-	else
-		blocklist_addwrite(&self->logiclist, len);
 }
 
 static inline bool blocklist_pushdata (struct blocklist *lst, const char *msgbuf, int len)
@@ -634,25 +738,20 @@ struct bufinfo buf_getreadbufinfo (struct net_buf *self)
 			/* encrypt */
 			struct bufinfo encrybuf = block_get_encrypt(bk);
 			assert(encrybuf.len >= 0);
-			self->dofunc(self->do_logicdata, encrybuf.buf, encrybuf.len);
+			if (self->raw_size_for_encrypt <= encrybuf.len)
+			{
+				encrybuf.len -= self->raw_size_for_encrypt;
+				encrybuf.buf = &encrybuf.buf[self->raw_size_for_encrypt];
+				self->raw_size_for_encrypt = 0;
+				self->dofunc(self->do_logicdata, encrybuf.buf, encrybuf.len);
+			}
+			else
+			{
+				self->raw_size_for_encrypt -= encrybuf.len;
+			}
 		}
 	}
 	return readbuf;
-}
-
-static inline void blocklist_addread (struct blocklist *lst, int len)
-{
-	assert(lst != NULL);
-	assert(len > 0);
-
-	/* first change datasize. */
-	atom_fetch_add(&lst->datasize, (-len));
-
-	/* add block read position. */
-	block_addread(lst->head, len);
-
-	/* test free. */
-	buf_test_and_freeblock(lst);
 }
 
 /* add read position. */
@@ -687,7 +786,26 @@ void buf_send_before_do (struct net_buf *self)
 			assert(srcbuf.len >= 0);
 			if ((srcbuf.len <= 0) || (!srcbuf.buf))
 				break;
-			resbuf = compressmgr_do_compressdata(compressbuf.buf, quicklzbuf, srcbuf.buf, srcbuf.len);
+			if (self->raw_size_for_compress != 0)
+			{
+				if (self->raw_size_for_compress <= srcbuf.len)
+				{
+					srcbuf.len = self->raw_size_for_compress;
+					self->raw_size_for_compress = 0;
+				}
+				else
+				{
+					self->raw_size_for_compress -= srcbuf.len;
+				}
+
+				resbuf.len = srcbuf.len;
+				resbuf.buf = srcbuf.buf;
+			}
+			else
+			{
+				resbuf = compressmgr_do_compressdata(compressbuf.buf, quicklzbuf, srcbuf.buf, srcbuf.len);
+			}
+
 			assert(resbuf.len > 0);
 			pushresult = blocklist_pushdata(&self->iolist, resbuf.buf, resbuf.len);
 			assert(pushresult);
@@ -713,6 +831,9 @@ char *buf_getmessage (struct net_buf *self, bool *needclose, char *buf, size_t b
 {
 	if (!self || !needclose)
 		return NULL;
+	if (self->use_tgw && (!self->already_do_tgw))
+		return NULL;
+
 	*needclose = false;
 	if (!buf || bufsize <= 0)
 		return blocklist_getmessage(&self->logiclist, threadbuf_get_msg_buf(), needclose, sockfd, __LINE__);

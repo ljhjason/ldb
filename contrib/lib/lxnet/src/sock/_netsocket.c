@@ -485,6 +485,26 @@ void socketer_use_decrypt (struct socketer *self)
 	buf_usedecrypt(self->recvbuf);
 }
 
+void socketer_use_tgw (struct socketer *self)
+{
+	assert(self != NULL);
+	if (!self)
+		return;
+
+	socketer_initrecvbuf(self);
+	buf_use_tgw(self->recvbuf);
+}
+
+void socketer_set_raw_datasize (struct socketer *self, size_t size)
+{
+	assert(self != NULL);
+	if (!self)
+		return;
+
+	socketer_initsendbuf(self);
+	buf_set_raw_datasize(self->sendbuf, size);
+}
+
 /* interface for event mgr. */
 
 void socketer_on_recv (struct socketer *self, int len)

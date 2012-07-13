@@ -74,6 +74,10 @@ void socketer_use_encrypt (struct socketer *self);
 
 void socketer_use_decrypt (struct socketer *self);
 
+void socketer_use_tgw (struct socketer *self);
+
+void socketer_set_raw_datasize (struct socketer *self, size_t size);
+
 /* interface for event mgr. */
 
 void socketer_on_recv (struct socketer *self, int len);

@@ -45,6 +45,10 @@ void buf_useencrypt (struct net_buf *self);
 
 void buf_usedecrypt (struct net_buf *self);
 
+void buf_use_tgw (struct net_buf *self);
+
+void buf_set_raw_datasize (struct net_buf *self, size_t size);
+
 /* push len, if is more than the limit, return true.*/
 bool buf_add_islimit (struct net_buf *self, size_t len);
 

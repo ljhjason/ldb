@@ -476,6 +476,13 @@ static int luasocketer_use_decrypt (lua_State *L)
 	return 0;
 }
 
+static int luasocketer_use_tgw (lua_State *L)
+{
+	Socketer *sock = get_socketer(L, 1);
+	sock->UseTGW();
+	return 0;
+}
+
 static int luasocketer_close (lua_State *L)
 {
 	Socketer *sock = get_socketer(L, 1);
@@ -526,6 +533,15 @@ static int luasocketer_sendpolicydata (lua_State *L)
 	return 1;
 }
 
+static int luasocketer_sendtgwinfo (lua_State *L)
+{
+	Socketer *sock = get_socketer(L, 1);
+	const char *domain = luaL_checkstring(L, 2);
+	int port = luaL_checkinteger(L, 3);
+	lua_pushboolean(L, sock->SendTGWInfo(domain, port));
+	return 1;
+}
+
 static int luasocketer_getmsg (lua_State *L)
 {
 	Socketer *sock = get_socketer(L, 1);
@@ -572,12 +588,14 @@ static const struct luaL_reg class_socketer_function[] = {
 	{"use_uncompress", luasocketer_use_uncompress},
 	{"use_encrypt", luasocketer_use_encrypt},
 	{"use_decrypt", luasocketer_use_decrypt},
+	{"use_tgw", luasocketer_use_tgw},
 	{"close", luasocketer_close},
 	{"connect", luasocketer_connect},
 	{"isclose", luasocketer_isclose},
 	{"getip", luasocketer_getip},
 	{"sendmsg", luasocketer_sendmsg},
 	{"sendpolicydata", luasocketer_sendpolicydata},
+	{"sendtgwinfo", luasocketer_sendtgwinfo},
 	{"getmsg", luasocketer_getmsg},
 	{"getmsg_ldb", luasocketer_getmsg_ldb},
 	{"realsend", luasocketer_realsend},

@@ -83,6 +83,8 @@ public:
 	/* （启用解密）*/
 	void UseDecrypt ();
 
+	/* 启用TGW接入 */
+	void UseTGW ();
 
 	/* 关闭用于连接的socket对象*/
 	void Close ();
@@ -101,6 +103,9 @@ public:
 
 	/* 对as3发送策略文件 */
 	bool SendPolicyData ();
+
+	/* 发送TGW信息头 */
+	bool SendTGWInfo (const char *domain, int port);
 
 	/* 触发真正的发送数据*/
 	void CheckSend ();
