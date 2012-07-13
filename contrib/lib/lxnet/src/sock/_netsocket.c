@@ -369,7 +369,7 @@ void socketer_checksend (struct socketer *self)
 void *socketer_getmsg (struct socketer *self, char *buf, size_t bufsize)
 {
 	void *msg;
-	bool needclose;
+	bool needclose = false;
 	assert(self != NULL);
 	if (!self)
 		return NULL;

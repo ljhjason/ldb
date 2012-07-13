@@ -834,7 +834,6 @@ char *buf_getmessage (struct net_buf *self, bool *needclose, char *buf, size_t b
 	if (self->use_tgw && (!self->already_do_tgw))
 		return NULL;
 
-	*needclose = false;
 	if (!buf || bufsize <= 0)
 		return blocklist_getmessage(&self->logiclist, threadbuf_get_msg_buf(), needclose, sockfd, __LINE__);
 	else
