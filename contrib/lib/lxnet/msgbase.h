@@ -168,6 +168,11 @@ struct MessagePack:public Msg
 		header.msglength += sizeof(data);
 	}
 
+	void PushBoolean(bool value)
+	{
+		PushInt8((int8)value);
+	}
+
 	void PushFloat(float data)
 	{
 		if ((m_index + sizeof(data)) >= e_thismessage_max_size)
@@ -215,7 +220,10 @@ struct MessagePack:public Msg
 		int16 size = GetInt16();
 		assert(size >= 0);
 		if (size < 0)
+		{
+			buf[0] = '\0';
 			return false;
+		}
 		if (0 == size)
 		{
 			buf[0] = '\0';
@@ -275,6 +283,11 @@ struct MessagePack:public Msg
 		temp = *((int8*)&m_buf[m_index]);
 		m_index += sizeof(temp);
 		return temp;
+	}
+
+	bool GetBoolean()
+	{
+		return (bool)GetInt8();
 	}
 
 	float GetFloat()
