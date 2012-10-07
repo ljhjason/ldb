@@ -120,6 +120,22 @@ struct MessagePack:public Msg
 		return PushBlock((void *)str, size);
 	}
 
+	bool PushBigString(const char *str, int32 maxpush = INT_MAX - 3)
+	{
+		size_t strsize = strlen(str);
+		assert(strsize < INT_MAX - 3);
+		int32 size = (int32)strsize;
+		if (size > maxpush)
+			size = maxpush;
+		assert(size >= 0);
+		if (size < 0)
+			return false;
+		PushInt32(size);
+		if (0 == size)
+			return true;
+		return PushBlock((void *)str, size);
+	}
+
 	void PushInt64(int64 data)
 	{
 		if ((m_index + sizeof(data)) >= e_thismessage_max_size)
@@ -218,6 +234,28 @@ struct MessagePack:public Msg
 			return false;
 		buf[buflen-1] = '\0';
 		int16 size = GetInt16();
+		assert(size >= 0);
+		if (size < 0)
+		{
+			buf[0] = '\0';
+			return false;
+		}
+		if (0 == size)
+		{
+			buf[0] = '\0';
+			return true;
+		}
+		buf[(size_t)(buflen > (size_t)size ? size : (buflen-1))] = '\0';
+		return GetBlock(buf, (size_t)(buflen > (size_t)size ? size : (buflen-1)));
+	}
+
+	bool GetBigString(char *buf, size_t buflen)
+	{
+		assert(buflen >= 1);
+		if (buflen < 1)
+			return false;
+		buf[buflen-1] = '\0';
+		int32 size = GetInt32();
 		assert(size >= 0);
 		if (size < 0)
 		{

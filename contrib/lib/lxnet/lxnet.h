@@ -148,6 +148,9 @@ void net_run ();
 /* 获取socket对象池，listen对象池，大块池，小块池的使用情况*/
 const char *net_memory_info ();
 
+/* 获取网络库通讯详情*/
+const char *net_datainfo ();
+
 }
 
 #endif /*_H_NET_SOCKET_H_*/

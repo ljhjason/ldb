@@ -13,10 +13,35 @@
 #include "pool.h"
 #include "msgbase.h"
 #include "log.h"
+#include "crosslib.h"
 
 #ifdef WIN32
 #define snprintf _snprintf
 #endif
+
+enum
+{
+	enum_netdata_total = 0,
+	enum_netdata_now,
+	enum_netdata_max,
+	enum_netdata_end,
+};
+
+struct datainfo
+{
+	int64 sendmsgnum;
+	int64 recvmsgnum;
+	int64 sendbytes;
+	int64 recvbytes;
+};
+
+struct datainfomgr
+{
+	bool isinit;
+	int64 lasttime;
+	struct datainfo datatable[enum_netdata_end];
+};
+static struct datainfomgr s_datamgr = {false};
 
 struct infomgr
 {
@@ -28,6 +53,54 @@ struct infomgr
 	LOCK_struct listen_lock;
 };
 static struct infomgr s_infomgr = {false};
+
+static inline void on_sendmsg (size_t len)
+{
+	assert(s_datamgr.isinit);
+	s_datamgr.datatable[enum_netdata_total].sendmsgnum += 1;
+	s_datamgr.datatable[enum_netdata_total].sendbytes += len;
+
+	s_datamgr.datatable[enum_netdata_now].sendmsgnum += 1;
+	s_datamgr.datatable[enum_netdata_now].sendbytes += len;
+}
+
+static inline void on_recvmsg (size_t len)
+{
+	assert(s_datamgr.isinit);
+
+	s_datamgr.datatable[enum_netdata_total].recvmsgnum += 1;
+	s_datamgr.datatable[enum_netdata_total].recvbytes += len;
+
+	s_datamgr.datatable[enum_netdata_now].recvmsgnum += 1;
+	s_datamgr.datatable[enum_netdata_now].recvbytes += len;
+}
+
+static void datarun ()
+{
+	assert(s_datamgr.isinit);
+	int64 currenttime = get_millisecond();
+	if (currenttime - s_datamgr.lasttime < 1000)
+		return;
+
+	s_datamgr.lasttime = currenttime;
+
+	if (s_datamgr.datatable[enum_netdata_max].sendmsgnum < s_datamgr.datatable[enum_netdata_now].sendmsgnum)
+		s_datamgr.datatable[enum_netdata_max].sendmsgnum = s_datamgr.datatable[enum_netdata_now].sendmsgnum;
+
+	if (s_datamgr.datatable[enum_netdata_max].recvmsgnum < s_datamgr.datatable[enum_netdata_now].recvmsgnum)
+		s_datamgr.datatable[enum_netdata_max].recvmsgnum = s_datamgr.datatable[enum_netdata_now].recvmsgnum;
+
+	if (s_datamgr.datatable[enum_netdata_max].sendbytes < s_datamgr.datatable[enum_netdata_now].sendbytes)
+		s_datamgr.datatable[enum_netdata_max].sendbytes = s_datamgr.datatable[enum_netdata_now].sendbytes;
+
+	if (s_datamgr.datatable[enum_netdata_max].recvbytes < s_datamgr.datatable[enum_netdata_now].recvbytes)
+		s_datamgr.datatable[enum_netdata_max].recvbytes = s_datamgr.datatable[enum_netdata_now].recvbytes;
+
+	s_datamgr.datatable[enum_netdata_now].sendmsgnum = 0;
+	s_datamgr.datatable[enum_netdata_now].recvmsgnum = 0;
+	s_datamgr.datatable[enum_netdata_now].sendbytes = 0;
+	s_datamgr.datatable[enum_netdata_now].recvbytes = 0;
+}
 
 static bool infomgr_init (size_t socketnum, size_t listennum)
 {
@@ -44,6 +117,16 @@ static bool infomgr_init (size_t socketnum, size_t listennum)
 	LOCK_INIT(&s_infomgr.socket_lock);
 	LOCK_INIT(&s_infomgr.listen_lock);
 	s_infomgr.isinit = true;
+
+	s_datamgr.isinit = true;
+	s_datamgr.lasttime = 0;
+	for (int i = 0; i < enum_netdata_end; ++i)
+	{
+		s_datamgr.datatable[i].sendmsgnum = 0;
+		s_datamgr.datatable[i].recvmsgnum = 0;
+		s_datamgr.datatable[i].sendbytes = 0;
+		s_datamgr.datatable[i].recvbytes = 0;
+	}
 	return true;
 }
 
@@ -52,6 +135,7 @@ static void infomgr_release ()
 	if (!s_infomgr.isinit)
 		return;
 	s_infomgr.isinit = false;
+	s_datamgr.isinit = false;
 	poolmgr_release(s_infomgr.socket_pool);
 	poolmgr_release(s_infomgr.listen_pool);
 	LOCK_DELETE(&s_infomgr.socket_lock);
@@ -203,6 +287,9 @@ bool Socketer::SendMsg (Msg *pMsg, void *adddata, size_t addsize)
 		Close();
 		return false;
 	}
+
+	on_sendmsg(pMsg->GetLength() + addsize);
+
 	if (adddata && addsize != 0)
 	{
 		bool res1, res2;
@@ -232,6 +319,8 @@ bool Socketer::SendPolicyData ()
 		Close();
 		return false;
 	}
+
+	on_sendmsg(datasize + 1);
 	return socketer_sendmsg(m_self, buf, datasize + 1);
 }
 
@@ -249,6 +338,7 @@ bool Socketer::SendTGWInfo (const char *domain, int port)
 		return false;
 	}
 	socketer_set_raw_datasize(m_self, datasize);
+	on_sendmsg(datasize);
 	return socketer_sendmsg(m_self, buf, datasize);
 }
 
@@ -267,7 +357,10 @@ void Socketer::CheckRecv ()
 /* 接收数据*/
 Msg *Socketer::GetMsg (char *buf, size_t bufsize)
 {
-	return (Msg *)socketer_getmsg(m_self, buf, bufsize);
+	Msg *obj = (Msg *)socketer_getmsg(m_self, buf, bufsize);
+	if (obj)
+		on_recvmsg(obj->GetLength());
+	return obj;
 }
 
 
@@ -378,6 +471,7 @@ void net_release ()
 /* 执行相关操作，需要在主逻辑中调用此函数*/
 void net_run ()
 {
+	datarun();
 	netrun();
 }
 
@@ -400,6 +494,35 @@ const char *net_memory_info ()
 	index = strlen(s_memory_info);
 	netmemory_info(&s_memory_info[index], sizeof(s_memory_info)-1-index);
 	return s_memory_info;
+}
+
+/* 获取网络库通讯详情*/
+const char *net_datainfo ()
+{
+	static char infostr[1024*64];
+	if (!s_datamgr.isinit)
+		return "not init!";
+
+	double numunit = 1000*1000;
+	double bytesunit = 1024*1024;
+	double totalsendmsgnum = (double)(s_datamgr.datatable[enum_netdata_total].sendmsgnum / numunit);
+	double totalsendbytes = double(s_datamgr.datatable[enum_netdata_total].sendbytes / bytesunit);
+	double totalrecvmsgnum = (double)(s_datamgr.datatable[enum_netdata_total].recvmsgnum / numunit);
+	double totalrecvbytes = double(s_datamgr.datatable[enum_netdata_total].recvbytes / bytesunit);
+
+	double maxsendmsgnum = (double)(s_datamgr.datatable[enum_netdata_max].sendmsgnum);
+	double maxsendbytes = double(s_datamgr.datatable[enum_netdata_max].sendbytes / bytesunit);
+	double maxrecvmsgnum = (double)(s_datamgr.datatable[enum_netdata_max].recvmsgnum);
+	double maxrecvbytes = double(s_datamgr.datatable[enum_netdata_max].recvbytes / bytesunit);
+
+	double nowsendmsgnum = (double)(s_datamgr.datatable[enum_netdata_now].sendmsgnum);
+	double nowsendbytes = double(s_datamgr.datatable[enum_netdata_now].sendbytes / bytesunit);
+	double nowrecvmsgnum = (double)(s_datamgr.datatable[enum_netdata_now].recvmsgnum);
+	double nowrecvbytes = double(s_datamgr.datatable[enum_netdata_now].recvbytes / bytesunit);
+
+	snprintf(infostr, sizeof(infostr) - 1, "total:\nsend msg num:%lfM, send bytes:%lfMB, recv msg num:%lfM, recv bytes:%lfMB\nmax:\nsend msg num:%lf, send bytes:%lfMB, recv msg num:%lf, recv bytes:%lfMB\nnow:\nsend msg num:%lf, send bytes:%lfMB, recv msg num:%lf, recv bytes:%lfMB\n", totalsendmsgnum, totalsendbytes, totalrecvmsgnum, totalrecvbytes, maxsendmsgnum, maxsendbytes, maxrecvmsgnum, maxrecvbytes, nowsendmsgnum, nowsendbytes, nowrecvmsgnum, nowrecvbytes);
+
+	return infostr;
 }
 
 }

@@ -19,6 +19,7 @@ extern "C"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "ossome.h"
 #include "crosslib.h"
 #include "log.h"
 #include "idmgr.h"
@@ -29,7 +30,7 @@ extern "C"
 
 using namespace lxnet;
 
-static int lualxnet_init(lua_State *L)
+static int lualxnet_init (lua_State *L)
 {
 	int smallbufsize = (int)luaL_checkinteger(L, 1);
 	luaL_argcheck(L, smallbufsize > 256, 1, "size is must greater than 256");
@@ -64,21 +65,27 @@ static int lualxnet_init(lua_State *L)
 	return 1;
 }
 
-static int lualxnet_release(lua_State *L)
+static int lualxnet_release (lua_State *L)
 {
 	net_release();
 	return 0;
 }
 
-static int lualxnet_run(lua_State *L)
+static int lualxnet_run (lua_State *L)
 {
 	net_run();
 	return 0;
 }
 
-static int lualxnet_meminfo(lua_State *L)
+static int lualxnet_meminfo (lua_State *L)
 {
 	lua_pushstring(L, net_memory_info());
+	return 1;
+}
+
+static int lualxnet_datainfo (lua_State *L)
+{
+	lua_pushstring(L, net_datainfo());
 	return 1;
 }
 
@@ -87,6 +94,7 @@ static const struct luaL_reg class_lxnet_function[] = {
 	{"release", lualxnet_release},
 	{"run", lualxnet_run},
 	{"meminfo", lualxnet_meminfo},
+	{"datainfo", lualxnet_datainfo},
 	{0, 0}
 };
 
@@ -114,6 +122,12 @@ static lua_State *getthread (lua_State *L, int *arg)
 		*arg = 0;
 		return L;
 	}
+}
+
+static int lua_cpunum (lua_State *L)
+{
+	lua_pushinteger(L, get_cpunum());
+	return 1;
 }
 
 static int lua_forlua_dgetinfo (lua_State *L)
@@ -170,7 +184,7 @@ static int krand (int min, int max)
 	int temp = min;
 	min = temp > max ? max: temp;
 	max = max < temp ? temp: max;
-	return (min + rand() % (max - min  + 1));
+	return (min + rand() % (max - min + 1));
 }
 
 static int lua_krand (lua_State *L)
@@ -179,6 +193,54 @@ static int lua_krand (lua_State *L)
 	int arg2 = luaL_checkinteger(L, 2);
 	lua_pushinteger(L, krand(arg1, arg2));
 	return 1;
+}
+
+static int lua_srand (lua_State *L)
+{
+	int seed = luaL_checkinteger(L, 1);
+	srand(seed);
+	return 0;
+}
+
+static unsigned int s_rand_high = 1;
+static unsigned int s_rand_low = 1 ^ 0x49616E42;
+
+static void lan_srand(unsigned int seed)
+{
+    s_rand_high = seed;
+    s_rand_low = seed ^ 0x49616E42;
+}
+
+static unsigned int lanrand()
+{
+    static const int shift = sizeof(int) / 2;
+    s_rand_high = (s_rand_high >> shift) + (s_rand_high << shift);
+    s_rand_high += s_rand_low;
+    s_rand_low += s_rand_high;
+    return s_rand_high;
+}
+
+static int klanrand (int min, int max)
+{
+	int temp = min;
+	min = temp > max ? max: temp;
+	max = max < temp ? temp: max;
+	return (min + lanrand() % (max - min + 1));
+}
+
+static int lua_lanrand (lua_State *L)
+{
+	int arg1 = luaL_checkinteger(L, 1);
+	int arg2 = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, klanrand(arg1, arg2));
+	return 1;
+}
+
+static int lua_lansrand (lua_State *L)
+{
+	int seed = luaL_checkinteger(L, 1);
+	lan_srand(seed);
+	return 0;
 }
 
 static int lua_get_millisecond (lua_State *L)
@@ -208,6 +270,38 @@ static int lua_getcurrentpath (lua_State *L)
 	getcurrentpath(buf, sizeof(buf) - 1);
 	lua_pushstring(L, buf);
 	return 1;
+}
+
+static int lua_getdirectory_freesize (lua_State *L)
+{
+	const char *dirpath = luaL_checkstring(L, 1);
+	int64 freesize = getdirectory_freesize(dirpath);
+	lua_pushnumber(L, (lua_Number )freesize);
+	return 1;
+}
+
+static int lua_processinfo_get (lua_State *L)
+{
+	double currentmemsize;
+	double maxmemsize;
+	int cpurate;
+	int maxcpurate;
+	int cpunum;
+	int threadnum;
+	processinfo_get(&currentmemsize, &maxmemsize, &cpurate, &maxcpurate, &cpunum, &threadnum);
+	lua_pushnumber(L, currentmemsize);
+	lua_pushnumber(L, maxmemsize);
+	lua_pushinteger(L, cpurate);
+	lua_pushinteger(L, maxcpurate);
+	lua_pushinteger(L, cpunum);
+	lua_pushinteger(L, threadnum);
+	return 6;
+}
+
+static int lua_processinfo_update (lua_State *L)
+{
+	processinfo_update();
+	return 0;
 }
 
 static int lua_iswindows (lua_State *L)
@@ -309,15 +403,22 @@ static int lua_bit_negate (lua_State *L)
 }
 
 static const struct luaL_reg g_function[] = {
+	{"cpunum", lua_cpunum},
 	{"forlua_dgetinfo", lua_forlua_dgetinfo},
 	{"create_guid", lua_create_guid},
 	{"hasstr", lua_hasstr},
 	{"rand", lua_krand},
+	{"srand", lua_srand},
+	{"lanrand", lua_lanrand},
+	{"lansrand", lua_lansrand},
 	{"delay", lua_delay},
 	{"getmicrosecond", lua_get_microsecond},
 	{"getmillisecond", lua_get_millisecond},
 	{"getfilefullname", lua_getfullname},
 	{"getcurrentpath", lua_getcurrentpath},
+	{"getdirectory_freesize", lua_getdirectory_freesize},
+	{"processinfo_get", lua_processinfo_get},
+	{"processinfo_update", lua_processinfo_update},
 	{"iswindows", lua_iswindows},
 	{"log_setdirectory", lua_log_setdirectory},
 	{"log_logtime", lua_log_logtime},
@@ -729,12 +830,41 @@ static int luapacket_pushstring (lua_State *L)
 static int luapacket_getstring (lua_State *L)
 {
 	static char buf[33*1024];
+	int16 maxlen = (int16)(sizeof(buf) - 1);
 
 	MessagePack *pack = get_messagepack(L, 1);
-	int16 needread = luaL_optinteger(L, 2, SHRT_MAX);
-	if (needread <= 0 || needread > SHRT_MAX)
-		needread = SHRT_MAX;
+	int16 needread = luaL_optinteger(L, 2, maxlen);
+	if (needread <= 0 || needread > maxlen)
+		needread = maxlen;
 	if (pack->GetString(buf, needread))
+		lua_pushstring(L, buf);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int luapacket_pushbigstring (lua_State *L)
+{
+	MessagePack *pack = get_messagepack(L, 1);
+	const char *str = luaL_checkstring(L, 2);
+	int32 needwrite = luaL_optinteger(L, 3, INT_MAX - 3);
+
+	if (needwrite < 0 || needwrite > INT_MAX - 3)
+		needwrite = INT_MAX - 3;
+	pack->PushBigString(str, needwrite);
+	return 0;
+}
+
+static int luapacket_getbigstring (lua_State *L)
+{
+	static char buf[1024*1024];
+	int32 maxlen = (int32)(sizeof(buf) - 1);
+
+	MessagePack *pack = get_messagepack(L, 1);
+	int32 needread = luaL_optinteger(L, 2, maxlen);
+	if (needread <= 0 || needread > maxlen)
+		needread = maxlen;
+	if (pack->GetBigString(buf, needread))
 		lua_pushstring(L, buf);
 	else
 		lua_pushnil(L);
@@ -919,6 +1049,8 @@ static const struct luaL_reg class_packet_function[] = {
 	{"settype", luapacket_settype},
 	{"pushstring", luapacket_pushstring},
 	{"getstring", luapacket_getstring},
+	{"pushbigstring", luapacket_pushbigstring},
+	{"getbigstring", luapacket_getbigstring},
 	{"begin", luapacket_begin},
 	{"pushboolean", luapacket_pushboolean},
 	{"getboolean", luapacket_getboolean},
@@ -1201,6 +1333,7 @@ extern "C" int luaopen_lxnet(lua_State* L)
 	signal(SIGINT, on_ctrl_hander);
 
 	srand(time(NULL));
+	lan_srand(time(NULL));
 	return 1;
 }
 
