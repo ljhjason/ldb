@@ -597,7 +597,7 @@ static inline char *blocklist_getmessage (struct blocklist *lst, char *buf, bool
 		lst->isnewmsg = true;
 	}
 	/* check packet length. */
-	if ((lst->msglen < (int)sizeof(lst->msglen)) || (lst->msglen >= (int)_MAX_MSG_LEN))
+	if ((lst->msglen < (int)sizeof(lst->msglen)) || (lst->msglen >= (int)((_MAX_MSG_LEN) - (int)sizeof(lst->msglen))))
 	{
 		*needclose = true;
 		assert(false && "if ((lst->msglen < sizeof(lst->msglen)) || (lst->msglen >= _MAX_MSG_LEN))");
@@ -605,14 +605,14 @@ static inline char *blocklist_getmessage (struct blocklist *lst, char *buf, bool
 		return NULL;
 	}
 
-	needread = lst->msglen - (sizeof(lst->msglen));
+	needread = lst->msglen - (int)(sizeof(lst->msglen));
 	if (lst->datasize < needread)
 		return NULL;
 	assert(lst->head != NULL);
 	readsize = 0;
 	read_s = 0;
 	
-	assert((needread > 0) && (needread < (_MAX_MSG_LEN-sizeof(lst->msglen))));	
+	assert((needread >= 0) && (needread < (_MAX_MSG_LEN-sizeof(lst->msglen))));	
 	
 	/* first load packet length. */
 	*(int *)&buf[0] = lst->msglen;

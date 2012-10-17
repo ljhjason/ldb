@@ -359,7 +359,14 @@ Msg *Socketer::GetMsg (char *buf, size_t bufsize)
 {
 	Msg *obj = (Msg *)socketer_getmsg(m_self, buf, bufsize);
 	if (obj)
+	{
+		if (obj->GetLength() < (int)sizeof(Msg))
+		{
+			Close();
+			return NULL;
+		}
 		on_recvmsg(obj->GetLength());
+	}
 	return obj;
 }
 
