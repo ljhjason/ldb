@@ -6,18 +6,22 @@ none:
 win32-debug:
 	cd lxnet && $(MAKE) win32-debug
 	cd lua-5.1.4 && $(MAKE) ansi
+	cd luacjson && $(MAKE) win32-debug
 
 win32-release:
 	cd lxnet && $(MAKE) win32-release
 	cd lua-5.1.4 && $(MAKE) ansi
+	cd luacjson && $(MAKE) win32-release
 
 linux-debug:
 	cd lxnet && $(MAKE) linux-debug
 	cd lua-5.1.4 && $(MAKE) linux
+	cd luacjson && $(MAKE) linux-debug
 
 linux-release:
 	cd lxnet && $(MAKE) linux-release
 	cd lua-5.1.4 && $(MAKE) linux
+	cd luacjson && $(MAKE) linux-release
 
 cleanall:
 	cd lxnet && $(MAKE) cleanall
