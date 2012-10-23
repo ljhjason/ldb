@@ -1,6 +1,6 @@
 #ifndef _H_LUACJSON_COMMON_H_
 #define _H_LUACJSON_COMMON_H_
-#ifdef WIN32
+#ifdef _MSC_VER
 #define MISSING_ISINF
 #include <float.h>
 #include <ctype.h>

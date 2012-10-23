@@ -47,25 +47,25 @@ none:
 	@echo " $(PLATS)"
 
 win32-debug:
-	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../lua-5.1.4/src"" LIBS="-L"c:/mingw/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
+	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../lua/src"" LIBS="-L"c:/mingw/lib" -L"./../lua/src/" -llua" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
 
 win32-debugjit:
 	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../LuaJIT/src"" LIBS="-L"c:/mingw/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
 
 win32-release:
-	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../lua-5.1.4/src"" LIBS="-L"c:/mingw/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
+	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../lua/src"" LIBS="-L"c:/mingw/lib" -L"./../lua/src/" -llua" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
 
 win32-releasejit:
 	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../LuaJIT/src"" LIBS="-L"c:/mingw/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
 
 linux-debug:
-	$(MAKE) all INCS="-I"/usr/include" -I"./../lua-5.1.4/src"" LIBS="-L"/usr/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
+	$(MAKE) all INCS="-I"/usr/include" -I"./../lua/src"" LIBS="-L"/usr/lib" -L"./../lua/src/" -llua" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
 
 linux-debugjit:
 	$(MAKE) all INCS="-I"/usr/include" -I"./../LuaJIT/src"" LIBS="-L"/usr/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
 
 linux-release:
-	$(MAKE) all INCS="-I"/usr/include" -I"./../lua-5.1.4/src"" LIBS="-L"/usr/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
+	$(MAKE) all INCS="-I"/usr/include" -I"./../lua/src"" LIBS="-L"/usr/lib" -L"./../lua/src/" -llua" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
 
 linux-releasejit:
 	$(MAKE) all INCS="-I"/usr/include" -I"./../LuaJIT/src"" LIBS="-L"/usr/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
