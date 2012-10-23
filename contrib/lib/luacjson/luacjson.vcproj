@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="lxnet"
-	ProjectGUID="{735335A1-FEE3-4542-883A-37AA0A2BFD46}"
-	RootNamespace="ldb"
+	Name="luacjson"
+	ProjectGUID="{9F0AC3BC-3031-419F-878A-A509390F2092}"
+	RootNamespace="luacjson"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -20,8 +20,8 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			CharacterSet="2"
+			ConfigurationType="4"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\contrib\base;..\..\contrib\lib\lxnet;&quot;..\..\contrib\lib\lua-5.1.4\src&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LDB_EXPORTS"
+				AdditionalIncludeDirectories=".\..\lua-5.1.4\src"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -60,20 +60,11 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="lxnet-debug.lib lualib-debug.lib luacjson-debug.lib ole32.lib psapi.lib"
-				OutputFile=".\$(ProjectName).dll"
-				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\contrib\lib\lxnet;&quot;..\..\contrib\lib\lua-5.1.4&quot;;..\..\contrib\lib\luacjson"
-				GenerateDebugInformation="true"
-				SubSystem="2"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
+				OutputFile=".\$(ProjectName)-debug.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -85,9 +76,6 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -95,8 +83,8 @@
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			CharacterSet="2"
+			ConfigurationType="4"
+			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -118,8 +106,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\..\contrib\base;..\..\contrib\lib\lxnet;&quot;..\..\contrib\lib\lua-5.1.4\src&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LDB_EXPORTS"
+				AdditionalIncludeDirectories=".\..\lua-5.1.4\src"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -136,22 +124,11 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="lxnet-release.lib lualib-release.lib luacjson-release.lib ole32.lib psapi.lib"
-				OutputFile=".\$(ProjectName).dll"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\..\contrib\lib\lxnet;&quot;..\..\contrib\lib\lua-5.1.4&quot;;..\..\contrib\lib\luacjson"
-				GenerateDebugInformation="true"
-				SubSystem="2"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
+				OutputFile=".\$(ProjectName)-release.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -161,9 +138,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -179,41 +153,29 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\lualxnet.cpp"
+				RelativePath=".\common.h"
 				>
 			</File>
-			<Filter
-				Name="base"
+			<File
+				RelativePath=".\fpconv.c"
 				>
-				<File
-					RelativePath="..\..\contrib\base\crosslib.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\contrib\base\idmgr.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\contrib\base\idmgr.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\contrib\base\processinfo.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\contrib\base\processinfo.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\contrib\base\utf8code.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\contrib\base\utility.c"
-					>
-				</File>
-			</Filter>
+			</File>
+			<File
+				RelativePath=".\fpconv.h"
+				>
+			</File>
+			<File
+				RelativePath=".\lua_cjson.c"
+				>
+			</File>
+			<File
+				RelativePath=".\strbuf.c"
+				>
+			</File>
+			<File
+				RelativePath=".\strbuf.h"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

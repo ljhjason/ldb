@@ -40,18 +40,6 @@ void getcurrentpath (char *buf, size_t bufsize);
  * */
 int64 getdirectory_freesize (const char *dirpath);
 
-/**
- * get the current process info.
- * note: memory unit: KB.
- * */
-void processinfo_get (double *currentmemsize, double *maxmemsize, int *cpurate, int *maxcpurate,
-		int *cpunum, int *threadnum);
-
-/**
- * update current process info.
- * */
-void processinfo_update ();
-
 #ifdef __cplusplus
 }
 #endif

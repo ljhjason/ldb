@@ -27,6 +27,7 @@ extern "C"
 #include "msgbase.h"
 #include "utf8code.h"
 #include "utility.h"
+#include "processinfo.h"
 
 using namespace lxnet;
 
@@ -282,20 +283,17 @@ static int lua_getdirectory_freesize (lua_State *L)
 
 static int lua_processinfo_get (lua_State *L)
 {
-	double currentmemsize;
-	double maxmemsize;
-	int cpurate;
-	int maxcpurate;
-	int cpunum;
-	int threadnum;
-	processinfo_get(&currentmemsize, &maxmemsize, &cpurate, &maxcpurate, &cpunum, &threadnum);
-	lua_pushnumber(L, currentmemsize);
-	lua_pushnumber(L, maxmemsize);
-	lua_pushinteger(L, cpurate);
-	lua_pushinteger(L, maxcpurate);
-	lua_pushinteger(L, cpunum);
-	lua_pushinteger(L, threadnum);
-	return 6;
+	struct processinfo res;
+	processinfo_get(&res);
+	lua_pushnumber(L, res.cur_mem);
+	lua_pushnumber(L, res.max_mem);
+	lua_pushnumber(L, res.cur_vm);
+	lua_pushnumber(L, res.max_vm);
+	lua_pushinteger(L, res.cur_cpu);
+	lua_pushinteger(L, res.max_cpu);
+	lua_pushinteger(L, res.cpunum);
+	lua_pushinteger(L, res.threadnum);
+	return 8;
 }
 
 static int lua_processinfo_update (lua_State *L)
@@ -1305,6 +1303,8 @@ static void on_ctrl_hander (int sig)
 	signal(SIGINT, on_ctrl_hander);
 }
 
+extern "C" int luaopen_cjson(lua_State *l);
+
 #ifdef WIN32
 extern "C" int __declspec(dllexport) luaopen_lxnet(lua_State* L)
 #else
@@ -1327,7 +1327,9 @@ extern "C" int luaopen_lxnet(lua_State* L)
 
 	luaL_register(L, "encode", class_encode_function);
 
-	lua_pop(L, 8);
+	luaopen_cjson(L);
+	
+	lua_pop(L, 9);
 
 	s_L = L;
 	signal(SIGINT, on_ctrl_hander);

@@ -4,22 +4,20 @@
 #
 #
 
-BIN = lxnet.so
+BIN = libluacjson.a
 CC = gcc
 CPP = g++
 #系统库的包含路径、库列表
 INCS = 
 LIBS = 
 SUBDIRS =
-
 #源文件包含路径、库列表
-SOURCEINC = -I"./../../contrib/base/" -I"./../../contrib/lib/lxnet/"
-SOURCELIB = -L"./../../contrib/lib/lxnet" -llxnet -L"./../../contrib/lib/luacjson" -lluacjson
+SOURCEINC =
+SOURCELIB = 
 #
 #
 #maintest.c tree/rbtree.c  多了子目录，那就直接添加 目录/*.c即可   所有的源文件--  .c文件列表
-CSRCS = $(wildcard  ./*.c ./../../contrib/base/idmgr.c ./../../contrib/base/utf8code.c ./../../contrib/base/utility.c ./../../contrib/base/processinfo.c)
-
+CSRCS = $(wildcard ./lua_cjson.c ./strbuf.c ./fpconv.c)
 CPPSRCS = $(wildcard ./*.cpp)
 
 #
@@ -49,28 +47,28 @@ none:
 	@echo " $(PLATS)"
 
 win32-debug:
-	$(MAKE) all BIN="lxnet.dll" INCS="-I"c:/mingw/include" -I"./../../contrib/lib/lua/src/"" LIBS="-L"c:/mingw/lib" -lws2_32 -L"./../../contrib/lib/lua/src/" -llua -lole32 -lpsapi" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
+	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../lua-5.1.4/src"" LIBS="-L"c:/mingw/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
 
 win32-debugjit:
-	$(MAKE) all BIN="lxnet.dll" INCS="-I"c:/mingw/include" -I"./../../contrib/lib/LuaJIT/src/"" LIBS="-L"c:/mingw/lib"  -lws2_32 -L"./../../contrib/lib/LuaJIT/src/" -lluajit -lole32 -lpsapi" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
+	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../LuaJIT/src"" LIBS="-L"c:/mingw/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-Wall -DWIN32 -DDEBUG -g" CPPFLAGS="-Wall -DWIN32 -DDEBUG -g"
 
 win32-release:
-	$(MAKE) all BIN="lxnet.dll" INCS="-I"c:/mingw/include" -I"./../../contrib/lib/lua/src/"" LIBS="-L"c:/mingw/lib" -lws2_32 -L"./../../contrib/lib/lua/src" -llua -lole32 -lpsapi" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
+	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../lua-5.1.4/src"" LIBS="-L"c:/mingw/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
 
 win32-releasejit:
-	$(MAKE) all BIN="lxnet.dll" INCS="-I"c:/mingw/include" -I"./../../contrib/lib/LuaJIT/src/"" LIBS="-L"c:/mingw/lib" -lws2_32 -L"./../../contrib/lib/LuaJIT/src" -lluajit -lole32 -lpsapi" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
+	$(MAKE) all INCS="-I"c:/mingw/include" -I"./../LuaJIT/src"" LIBS="-L"c:/mingw/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-Wall -DWIN32 -DNDEBUG -O2" CPPFLAGS="-Wall -DWIN32 -DNDEBUG -O2"
 
 linux-debug:
-	$(MAKE) all BIN="lxnet.so" INCS="-I"/usr/include" -I"./../../contrib/lib/lua/src/"" LIBS="-L"/usr/lib" -lpthread -L"./../../contrib/lib/lua/src" -llua -luuid" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
+	$(MAKE) all INCS="-I"/usr/include" -I"./../lua-5.1.4/src"" LIBS="-L"/usr/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
 
 linux-debugjit:
-	$(MAKE) all BIN="lxnet.so" INCS="-I"/usr/include" -I"./../../contrib/lib/LuaJIT/src/"" LIBS="-L"/usr/lib" -lpthread -L"./../../contrib/lib/LuaJIT/src" -lluajit -luuid" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
+	$(MAKE) all INCS="-I"/usr/include" -I"./../LuaJIT/src"" LIBS="-L"/usr/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-fPIC -Wall -DDEBUG -g" CPPFLAGS="-fPIC -Wall -DDEBUG -g"
 
 linux-release:
-	$(MAKE) all BIN="lxnet.so" INCS="-I"/usr/include" -I"./../../contrib/lib/lua/src/"" LIBS="-L"/usr/lib" -lpthread -L"./../../contrib/lib/lua/src" -llua -luuid" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
+	$(MAKE) all INCS="-I"/usr/include" -I"./../lua-5.1.4/src"" LIBS="-L"/usr/lib" -L"./../lua-5.1.4/src/" -llua" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
 
 linux-releasejit:
-	$(MAKE) all BIN="lxnet.so" INCS="-I"/usr/include" -I"./../../contrib/lib/LuaJIT/src/"" LIBS="-L"/usr/lib" -lpthread -L"./../../contrib/lib/LuaJIT/src" -lluajit -luuid" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
+	$(MAKE) all INCS="-I"/usr/include" -I"./../LuaJIT/src"" LIBS="-L"/usr/lib" -L"./../LuaJIT/src/" -lluajit" CFLAGS="-fPIC -Wall -DNDEBUG -O2" CPPFLAGS="-fPIC -Wall -DNDEBUG -O2"
 
 all:$(BIN)
 
@@ -85,9 +83,9 @@ $(CPPOBJS) : %.o: %.cpp
 # $@--目标文件，$^--所有的依赖文件，$<--第一个依赖文件。每次$< $@ 代表的值就是列表中的
 #
 $(BIN) : $(COBJS) $(CPPOBJS)
-	$(CPP) -shared -o $(BIN) $(COBJS) $(CPPOBJS) $(SOURCELIB) $(LIBS)
-	-rm $(COBJS)
-	-rm $(CPPOBJS)
+	ar r $(BIN) $(COBJS) $(CPPOBJS)
+	ranlib $(BIN)
+	-rm $(COBJS) $(CPPOBJS)
 # 链接为最终目标
 
 
@@ -99,14 +97,8 @@ $(BIN) : $(COBJS) $(CPPOBJS)
 
 #清除所有目标文件以及生成的最终目标文件
 clean:			
-	-rm $(BIN)
-	-rm lxnet.dll
-	-rm $(COBJS)
-	-rm $(CPPOBJS)
+	-rm $(BIN) $(COBJS) $(CPPOBJS)
 #rm *.d
 cleanall:
-	-rm $(BIN)
-	-rm lxnet.dll
-	-rm $(COBJS)
-	-rm $(CPPOBJS)
+	-rm $(BIN) $(COBJS) $(CPPOBJS)
 
