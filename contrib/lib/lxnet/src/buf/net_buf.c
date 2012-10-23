@@ -441,6 +441,7 @@ static inline void blocklist_addread (struct blocklist *lst, int len)
 
 static bool buf_try_parse_tgw (struct blocklist *lst, char **buf, int *len)
 {
+	const int maxchecksize = 256;
 	char tgwbuf[] = "\r\n\r\n";
 	int findidx = 0;
 	struct block *bk;
@@ -448,12 +449,18 @@ static bool buf_try_parse_tgw (struct blocklist *lst, char **buf, int *len)
 	int i;
 	int canreadsize;
 	char *f;
+	
+	*buf = NULL;
+	*len = 0;
 	for (bk = lst->head; bk; bk = bk->next)
 	{
 		f = block_getreadbuf(bk);
 		canreadsize = block_getreadsize(bk);
 		for (i = 0; i < canreadsize; ++i)
 		{
+			if (num >= maxchecksize)
+				return false;
+
 			if (f[i] == tgwbuf[findidx])
 				findidx++;
 			else
@@ -468,18 +475,11 @@ static bool buf_try_parse_tgw (struct blocklist *lst, char **buf, int *len)
 					*buf = &f[i + 1];
 					*len = canreadsize - (i + 1);
 				}
-				else
-				{
-					*buf = NULL;
-					*len = 0;
-				}
 				return true;
 			}
 		}
 	}
 
-	*buf = NULL;
-	*len = 0;
 	return false;
 }
 

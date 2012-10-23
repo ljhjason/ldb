@@ -7,12 +7,13 @@
 BIN = liblxnet.a
 CC = gcc
 CPP = g++
-#这里只加入库头文件路径及库路径
+#系统库的包含路径、库列表
 INCS = 
 LIBS = 
 SUBDIRS =
-#生成依赖信息时的搜索目录，比如到下列目录中搜索一个依赖文件(比如.h文件)
-DEFINC = -I"./../../base/" -I"./src/buf/" -I"./src/event/" -I"./src/sock/" -I"./src/threadpool/"
+
+#源文件包含路径、库列表
+SOURCEINC = -I"./../../base/" -I"./src/buf/" -I"./src/event/" -I"./src/sock/" -I"./src/threadpool/"
 #
 #
 #maintest.c tree/rbtree.c  多了子目录，那就直接添加 目录/*.c即可   所有的源文件--  .c文件列表
@@ -59,34 +60,13 @@ linux-release:
 
 all:$(BIN)
 
-#生成.o的对自己目录中.h .c的依赖信息.d文件到.c所在的路径中
-#$(DEF)文件是.d文件名列表(含目录)，比如tree.d 匹配成功那么%就是tree，然后在尝试%.c，如果成功。则执行规则
-# $(<:.c=.o)是获取此.c文件的名字(含路径)，然后变为.o比如 src/xxx.o。 以形成如下
-# src/xxx.o : src/xxx.c ***.h  ***.h  最前面！！注意。  
-# 此做法是每个.d都和生成他的.c在一个目录里，所以需要这样做。
-# $(<:.c=.o)之类的 。此时的<相当于变量$< 。切记
-# : : :  含义同下
-$(CDEF) : %.d : %.c
-	$(MAKEDEPEND) $(<:.c=.o) $< $(DEFINC) > $@
-$(CPPDEF) : %.d : %.cpp
-	$(MAKEDEPEND) $(<:.cpp=.o) $< $(DEFINC) > $@
-
-#先删除依赖信息
-#重新生成依赖信息
-#这里出现了一个 $(MAKE) 没有定义的变量。这个变量是由 Make 自己定义的，它的值即为自己的位置，方便 Make 递归调用自己。
-depend:
-	-rm $(CDEF)
-	-rm $(CPPDEF)
-	$(MAKE) $(CDEF)
-	$(MAKE) $(CPPDEF)
-
 #$(OBJS):%.o :%.c  先用$(OBJS)中的一项，比如foo.o: %.o : %.c  含义为:试着用%.o匹配foo.o。如果成功%就等于foo。如果不成功，
 # Make就会警告，然后。给foo.o添加依赖文件foo.c(用foo替换了%.c里的%)
 # 也可以不要下面的这个生成规则，因为下面的 include $(DEF)  就隐含了。此处为了明了，易懂。故留着
 $(COBJS) : %.o: %.c
-	$(CC) -c $< -o $@ $(INCS) $(DEFINC) $(CFLAGS)
+	$(CC) -c $< -o $@ $(INCS) $(SOURCEINC) $(CFLAGS)
 $(CPPOBJS) : %.o: %.cpp
-	$(CPP) -c $< -o $@ $(INCS) $(DEFINC) $(CPPFLAGS)
+	$(CPP) -c $< -o $@ $(INCS) $(SOURCEINC) $(CPPFLAGS)
 
 # $@--目标文件，$^--所有的依赖文件，$<--第一个依赖文件。每次$< $@ 代表的值就是列表中的
 #
