@@ -827,7 +827,7 @@ static int luapacket_pushstring (lua_State *L)
 
 static int luapacket_getstring (lua_State *L)
 {
-	static char buf[33*1024];
+	static char buf[SHRT_MAX - 3];
 	int16 maxlen = (int16)(sizeof(buf) - 1);
 
 	MessagePack *pack = get_messagepack(L, 1);
