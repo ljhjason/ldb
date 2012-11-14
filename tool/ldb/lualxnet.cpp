@@ -287,13 +287,16 @@ static int lua_processinfo_get (lua_State *L)
 	processinfo_get(&res);
 	lua_pushnumber(L, res.cur_mem);
 	lua_pushnumber(L, res.max_mem);
+	lua_pushnumber(L, res.tm_max_mem);
 	lua_pushnumber(L, res.cur_vm);
 	lua_pushnumber(L, res.max_vm);
+	lua_pushnumber(L, res.tm_max_vm);
 	lua_pushinteger(L, res.cur_cpu);
 	lua_pushinteger(L, res.max_cpu);
+	lua_pushnumber(L, res.tm_max_cpu);
 	lua_pushinteger(L, res.cpunum);
 	lua_pushinteger(L, res.threadnum);
-	return 8;
+	return 11;
 }
 
 static int lua_processinfo_update (lua_State *L)

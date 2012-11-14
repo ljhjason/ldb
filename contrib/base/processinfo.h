@@ -11,6 +11,7 @@
 extern "C"{
 #endif
 
+#include <time.h>
 #include "alway_inline.h"
 
 struct processinfo
@@ -23,6 +24,9 @@ struct processinfo
 	int max_cpu;
 	int cpunum;
 	int threadnum;
+	time_t tm_max_mem;
+	time_t tm_max_vm;
+	time_t tm_max_cpu;
 };
 
 /**

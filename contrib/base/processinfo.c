@@ -5,6 +5,7 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include "processinfo.h"
 #include "ossome.h"
 #include "crosslib.h"
@@ -15,7 +16,6 @@
 #define snprintf _snprintf
 #else
 #include <unistd.h>
-#include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -374,6 +374,9 @@ void processinfo_get (struct processinfo *state)
 	state->max_cpu = s_mgr.state.max_cpu;
 	state->cpunum = s_mgr.state.cpunum;
 	state->threadnum = s_mgr.state.threadnum;
+	state->tm_max_mem = s_mgr.state.tm_max_mem;
+	state->tm_max_vm = s_mgr.state.tm_max_vm;
+	state->tm_max_cpu = s_mgr.state.tm_max_cpu;
 }
 
 /**
@@ -382,6 +385,8 @@ void processinfo_get (struct processinfo *state)
 void processinfo_update ()
 {
 	int64 currenttime = get_millisecond();
+	double old_max_mem, old_max_vm;
+	time_t curtm;
 	if (!s_mgr.isinit)
 	{
 		s_mgr.isinit = true;
@@ -393,6 +398,9 @@ void processinfo_update ()
 		s_mgr.state.max_cpu = 0;
 		s_mgr.state.cpunum = get_cpunum();
 		s_mgr.state.threadnum = 1;
+		s_mgr.state.tm_max_mem = 0;
+		s_mgr.state.tm_max_vm = 0;
+		s_mgr.state.tm_max_cpu = 0;
 		s_mgr.lastupdatetime = 0;
 	}
 
@@ -400,9 +408,23 @@ void processinfo_update ()
 		return;
 
 	s_mgr.lastupdatetime = currenttime;
+
+	curtm = time(NULL);
+	old_max_mem = s_mgr.state.max_mem;
+	old_max_vm = s_mgr.state.max_vm;
+
 	getprocess_someinfo(&s_mgr.state);
 
-	if (s_mgr.state.max_cpu < s_mgr.state.cur_cpu)
+	if (s_mgr.state.max_mem > old_max_mem)
+		s_mgr.state.tm_max_mem = curtm;
+
+	if (s_mgr.state.max_vm > old_max_vm)
+		s_mgr.state.tm_max_vm = curtm;
+
+	if (s_mgr.state.max_cpu <= s_mgr.state.cur_cpu)
+	{
 		s_mgr.state.max_cpu = s_mgr.state.cur_cpu;
+		s_mgr.state.tm_max_cpu = curtm;
+	}
 }
 

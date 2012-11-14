@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "ossome.h"
 #include "net_module.h"
 #include "lxnet.h"
@@ -33,6 +34,10 @@ struct datainfo
 	int64 recvmsgnum;
 	int64 sendbytes;
 	int64 recvbytes;
+	time_t tm_sendmsgnum;
+	time_t tm_recvmsgnum;
+	time_t tm_sendbytes;
+	time_t tm_recvbytes;
 };
 
 struct datainfomgr
@@ -84,17 +89,30 @@ static void datarun ()
 
 	s_datamgr.lasttime = currenttime;
 
-	if (s_datamgr.datatable[enum_netdata_max].sendmsgnum < s_datamgr.datatable[enum_netdata_now].sendmsgnum)
+	time_t curtm = time(NULL);
+	if (s_datamgr.datatable[enum_netdata_max].sendmsgnum <= s_datamgr.datatable[enum_netdata_now].sendmsgnum)
+	{
 		s_datamgr.datatable[enum_netdata_max].sendmsgnum = s_datamgr.datatable[enum_netdata_now].sendmsgnum;
+		s_datamgr.datatable[enum_netdata_max].tm_sendmsgnum = curtm;
+	}
 
-	if (s_datamgr.datatable[enum_netdata_max].recvmsgnum < s_datamgr.datatable[enum_netdata_now].recvmsgnum)
+	if (s_datamgr.datatable[enum_netdata_max].recvmsgnum <= s_datamgr.datatable[enum_netdata_now].recvmsgnum)
+	{
 		s_datamgr.datatable[enum_netdata_max].recvmsgnum = s_datamgr.datatable[enum_netdata_now].recvmsgnum;
+		s_datamgr.datatable[enum_netdata_max].tm_recvmsgnum = curtm;
+	}
 
-	if (s_datamgr.datatable[enum_netdata_max].sendbytes < s_datamgr.datatable[enum_netdata_now].sendbytes)
+	if (s_datamgr.datatable[enum_netdata_max].sendbytes <= s_datamgr.datatable[enum_netdata_now].sendbytes)
+	{
 		s_datamgr.datatable[enum_netdata_max].sendbytes = s_datamgr.datatable[enum_netdata_now].sendbytes;
+		s_datamgr.datatable[enum_netdata_max].tm_sendbytes = curtm;
+	}
 
-	if (s_datamgr.datatable[enum_netdata_max].recvbytes < s_datamgr.datatable[enum_netdata_now].recvbytes)
+	if (s_datamgr.datatable[enum_netdata_max].recvbytes <= s_datamgr.datatable[enum_netdata_now].recvbytes)
+	{
 		s_datamgr.datatable[enum_netdata_max].recvbytes = s_datamgr.datatable[enum_netdata_now].recvbytes;
+		s_datamgr.datatable[enum_netdata_max].tm_recvbytes = curtm;
+	}
 
 	s_datamgr.datatable[enum_netdata_now].sendmsgnum = 0;
 	s_datamgr.datatable[enum_netdata_now].recvmsgnum = 0;
@@ -503,6 +521,17 @@ const char *net_memory_info ()
 	return s_memory_info;
 }
 
+//获取当前时间。格式为"2010-09-16 23:20:20"
+const char *CurrentTimeStr (time_t tval, char *buf, size_t buflen)
+{
+	if (buflen < 64)
+		return "null";
+	struct tm *currTM = localtime(&tval);
+	snprintf(buf, buflen-1, "%d-%02d-%02d %02d:%02d:%02d", currTM->tm_year+1900, currTM->tm_mon+1, currTM->tm_mday, currTM->tm_hour, currTM->tm_min, currTM->tm_sec);
+	buf[buflen-1] = '\0';
+	return buf;
+}
+
 /* 获取网络库通讯详情*/
 const char *net_datainfo ()
 {
@@ -527,7 +556,16 @@ const char *net_datainfo ()
 	double nowrecvmsgnum = (double)(s_datamgr.datatable[enum_netdata_now].recvmsgnum);
 	double nowrecvbytes = double(s_datamgr.datatable[enum_netdata_now].recvbytes / bytesunit);
 
-	snprintf(infostr, sizeof(infostr) - 1, "total:\nsend msg num:%lfM, send bytes:%lfMB, recv msg num:%lfM, recv bytes:%lfMB\nmax:\nsend msg num:%lf, send bytes:%lfMB, recv msg num:%lf, recv bytes:%lfMB\nnow:\nsend msg num:%lf, send bytes:%lfMB, recv msg num:%lf, recv bytes:%lfMB\n", totalsendmsgnum, totalsendbytes, totalrecvmsgnum, totalrecvbytes, maxsendmsgnum, maxsendbytes, maxrecvmsgnum, maxrecvbytes, nowsendmsgnum, nowsendbytes, nowrecvmsgnum, nowrecvbytes);
+	char buf_sendmsgnum[128] = {};
+	char buf_sendbytes[128] = {};
+	char buf_recvmsgnum[128] = {};
+	char buf_recvbytes[128] = {};
+	CurrentTimeStr(s_datamgr.datatable[enum_netdata_max].tm_sendmsgnum, buf_sendmsgnum, sizeof(buf_sendmsgnum));
+	CurrentTimeStr(s_datamgr.datatable[enum_netdata_max].tm_sendbytes, buf_sendbytes, sizeof(buf_sendbytes));
+	CurrentTimeStr(s_datamgr.datatable[enum_netdata_max].tm_recvmsgnum, buf_recvmsgnum, sizeof(buf_recvmsgnum));
+	CurrentTimeStr(s_datamgr.datatable[enum_netdata_max].tm_recvbytes, buf_recvbytes, sizeof(buf_recvbytes));
+
+	snprintf(infostr, sizeof(infostr) - 1, "total: send msg num:%lfM, send bytes:%lfMB, recv msg num:%lfM, recv bytes:%lfMB\nmax:\nsend msg num:%lf, time:%s\nsend bytes:%lfMB, time:%s\nrecv msg num:%lf, time:%s\nrecv bytes:%lfMB, time:%s\nnow: send msg num:%lf, send bytes:%lfMB, recv msg num:%lf, recv bytes:%lfMB\n", totalsendmsgnum, totalsendbytes, totalrecvmsgnum, totalrecvbytes, maxsendmsgnum, buf_sendmsgnum, maxsendbytes, buf_sendbytes, maxrecvmsgnum, buf_recvmsgnum, maxrecvbytes, buf_recvbytes, nowsendmsgnum, nowsendbytes, nowrecvmsgnum, nowrecvbytes);
 
 	return infostr;
 }
