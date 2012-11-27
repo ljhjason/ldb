@@ -17,6 +17,7 @@ extern "C"
 #include <limits.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include "ossome.h"
@@ -28,6 +29,17 @@ extern "C"
 #include "utf8code.h"
 #include "utility.h"
 #include "processinfo.h"
+
+#ifdef WIN32
+#define snprintf _snprintf
+#define _FORMAT_64_NUM "%I64d"
+#else
+#ifdef __x86_64__
+#define _FORMAT_64_NUM "%ld"
+#elif __i386__
+#define _FORMAT_64_NUM "%lld"
+#endif
+#endif
 
 using namespace lxnet;
 
@@ -362,18 +374,31 @@ static int lua_makeint64by32 (lua_State *L)
 	int32 low = luaL_checkinteger(L, 2);
 	int64 res = 0;
 	res |= high;
-	res <<=32;
+	res <<= 32;
 	res |= low;
-	lua_pushnumber(L, (lua_Number) res);
+
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.i = res;
+	lua_pushnumber(L, temp.f);
 	return 1;
 }
 
 static int lua_parseint64 (lua_State *L)
 {
 	lua_Number resf = luaL_checknumber(L, 1);
-	int64 res = (int64)resf;
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = resf;
+	int64 res = temp.i;
 	
-	int32 low = (int32)res;
+	int32 low = (int32)(res & 0xffffffff);
 	int32 high = (int32)(res >> 32);
 	lua_pushinteger(L, high);
 	lua_pushinteger(L, low);
@@ -382,24 +407,65 @@ static int lua_parseint64 (lua_State *L)
 
 static int lua_bit_or (lua_State *L)
 {
-	int64 v1 = (int64)luaL_checknumber(L, 1);
-	int64 v2 = (int64)luaL_checknumber(L, 2);
-	lua_pushnumber(L, v1 | v2);
+	int64 v1, v2;
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	v1 = temp.i;
+	temp.f = luaL_checknumber(L, 2);
+	v2 = temp.i;
+
+	temp.i = v1 | v2;
+	lua_pushnumber(L, temp.f);
 	return 1;
 }
 
 static int lua_bit_and (lua_State *L)
 {
-	int64 v1 = (int64)luaL_checknumber(L, 1);
-	int64 v2 = (int64)luaL_checknumber(L, 2);
-	lua_pushnumber(L, v1 & v2);
+	int64 v1, v2;
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	v1 = temp.i;
+	temp.f = luaL_checknumber(L, 2);
+	v2 = temp.i;
+
+	temp.i = v1 & v2;
+	lua_pushnumber(L, temp.f);
 	return 1;
 }
 
 static int lua_bit_negate (lua_State *L)
 {
-	int64 v = (int64)luaL_checknumber(L, 1);
-	lua_pushnumber(L, ~v);
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	temp.i = ~temp.i;
+	lua_pushnumber(L, temp.f);
+	return 1;
+}
+
+static int lua_int64_tostring (lua_State *L)
+{
+	char buf[4096] = {};
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	snprintf(buf, sizeof(buf) - 1, _FORMAT_64_NUM, temp.i);
+	buf[sizeof(buf) - 1] = '\0';
+	lua_pushstring(L, buf);
 	return 1;
 }
 
@@ -431,6 +497,7 @@ static const struct luaL_reg g_function[] = {
 	{"bit_or", lua_bit_or},
 	{"bit_and", lua_bit_and},
 	{"bit_negate", lua_bit_negate},
+	{"int64_tostring", lua_int64_tostring},
 	{0, 0}
 };
 
@@ -655,7 +722,19 @@ static int luasocketer_getmsg (lua_State *L)
 	return 1;
 }
 
-static int luasocketer_getmsg_ldb (lua_State *L)
+static int luasocketer_getmsg_ldb_main_thread (lua_State *L)
+{
+	static char s_buf[1024*256];
+	Socketer *sock = get_socketer(L, 1);
+	Msg *pMsg = sock->GetMsg(s_buf, sizeof(s_buf));
+	if (!pMsg)
+		lua_pushnil(L);
+	else
+		lua_pushlightuserdata(L, pMsg);
+	return 1;
+}
+
+static int luasocketer_getmsg_ldb_task_thread (lua_State *L)
 {
 	static char s_buf[1024*256];
 	Socketer *sock = get_socketer(L, 1);
@@ -699,27 +778,43 @@ static const struct luaL_reg class_socketer_function[] = {
 	{"sendpolicydata", luasocketer_sendpolicydata},
 	{"sendtgwinfo", luasocketer_sendtgwinfo},
 	{"getmsg", luasocketer_getmsg},
-	{"getmsg_ldb", luasocketer_getmsg_ldb},
 	{"realsend", luasocketer_realsend},
 	{"realrecv", luasocketer_realrecv},
 	{0, 0}
 };
 
-static MessagePack s_anyfor_ldb;
-static MessagePack s_anyfirst;
-static MessagePack s_anysecond;
-static MessagePack s_anythird;
+static const struct luaL_reg class_socketer_function_main_thread[] = {
+	{"getmsg_ldb", luasocketer_getmsg_ldb_main_thread},
+	{0, 0}
+};
 
-static int luapacket_anyfor_ldb (lua_State *L)
+static const struct luaL_reg class_socketer_function_task_thread[] = {
+	{"getmsg_ldb", luasocketer_getmsg_ldb_task_thread},
+	{0, 0}
+};
+
+
+static int luapacket_anyfor_ldb_main_thread (lua_State *L)
 {
+	static MessagePack s_anyfor_ldb;
 	MessagePack *pack = &s_anyfor_ldb;
 	pack->ResetMsgLength();
 	lua_pushlightuserdata(L, pack);
 	return 1;
 }
 
-static int luapacket_anyfirst (lua_State *L)
+static int luapacket_anyfor_ldb_task_thread (lua_State *L)
 {
+	static MessagePack s_anyfor_ldb;
+	MessagePack *pack = &s_anyfor_ldb;
+	pack->ResetMsgLength();
+	lua_pushlightuserdata(L, pack);
+	return 1;
+}
+
+static int luapacket_anyfirst_main_thread (lua_State *L)
+{
+	static MessagePack s_anyfirst;
 	MessagePack *pack = &s_anyfirst;
 	pack->ResetMsgLength();
 	pack->SetType(-1);
@@ -727,8 +822,19 @@ static int luapacket_anyfirst (lua_State *L)
 	return 1;
 }
 
-static int luapacket_anysecond (lua_State *L)
+static int luapacket_anyfirst_task_thread (lua_State *L)
 {
+	static MessagePack s_anyfirst;
+	MessagePack *pack = &s_anyfirst;
+	pack->ResetMsgLength();
+	pack->SetType(-1);
+	lua_pushlightuserdata(L, pack);
+	return 1;
+}
+
+static int luapacket_anysecond_main_thread (lua_State *L)
+{
+	static MessagePack s_anysecond;
 	MessagePack *pack = &s_anysecond;
 	pack->ResetMsgLength();
 	pack->SetType(-1);
@@ -736,8 +842,29 @@ static int luapacket_anysecond (lua_State *L)
 	return 1;
 }
 
-static int luapacket_anythird (lua_State *L)
+static int luapacket_anysecond_task_thread (lua_State *L)
 {
+	static MessagePack s_anysecond;
+	MessagePack *pack = &s_anysecond;
+	pack->ResetMsgLength();
+	pack->SetType(-1);
+	lua_pushlightuserdata(L, pack);
+	return 1;
+}
+
+static int luapacket_anythird_main_thread (lua_State *L)
+{
+	static MessagePack s_anythird;
+	MessagePack *pack = &s_anythird;
+	pack->ResetMsgLength();
+	pack->SetType(-1);
+	lua_pushlightuserdata(L, pack);
+	return 1;
+}
+
+static int luapacket_anythird_task_thread (lua_State *L)
+{
+	static MessagePack s_anythird;
 	MessagePack *pack = &s_anythird;
 	pack->ResetMsgLength();
 	pack->SetType(-1);
@@ -828,7 +955,23 @@ static int luapacket_pushstring (lua_State *L)
 	return 0;
 }
 
-static int luapacket_getstring (lua_State *L)
+static int luapacket_getstring_main_thread (lua_State *L)
+{
+	static char buf[SHRT_MAX - 3];
+	int16 maxlen = (int16)(sizeof(buf) - 1);
+
+	MessagePack *pack = get_messagepack(L, 1);
+	int16 needread = luaL_optinteger(L, 2, maxlen);
+	if (needread <= 0 || needread > maxlen)
+		needread = maxlen;
+	if (pack->GetString(buf, needread))
+		lua_pushstring(L, buf);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int luapacket_getstring_task_thread (lua_State *L)
 {
 	static char buf[SHRT_MAX - 3];
 	int16 maxlen = (int16)(sizeof(buf) - 1);
@@ -856,7 +999,23 @@ static int luapacket_pushbigstring (lua_State *L)
 	return 0;
 }
 
-static int luapacket_getbigstring (lua_State *L)
+static int luapacket_getbigstring_main_thread (lua_State *L)
+{
+	static char buf[1024*1024];
+	int32 maxlen = (int32)(sizeof(buf) - 1);
+
+	MessagePack *pack = get_messagepack(L, 1);
+	int32 needread = luaL_optinteger(L, 2, maxlen);
+	if (needread <= 0 || needread > maxlen)
+		needread = maxlen;
+	if (pack->GetBigString(buf, needread))
+		lua_pushstring(L, buf);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int luapacket_getbigstring_task_thread (lua_State *L)
 {
 	static char buf[1024*1024];
 	int32 maxlen = (int32)(sizeof(buf) - 1);
@@ -944,14 +1103,27 @@ static int luapacket_pushint64 (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
 	lua_Number value = luaL_checknumber(L, 2);
-	pack->PushInt64((int64)value);
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = value;
+	pack->PushInt64(temp.i);
 	return 0;
 }
 
 static int luapacket_getint64 (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
-	lua_pushnumber(L, (lua_Number)pack->GetInt64());
+	int64 value = pack->GetInt64();
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.i = value;
+	lua_pushnumber(L, temp.f);
 	return 1;
 }
 
@@ -990,7 +1162,13 @@ static int luapacket_pushint64toindex (lua_State *L)
 	MessagePack *pack = get_messagepack(L, 1);
 	int index = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, index >= 0, 2, "pushint64toindex, index need greater than or equal to zero");
-	int64 value = (int64)luaL_checknumber(L, 3);
+	union
+	{
+		double f;
+		uint64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 3);
+	int64 value = temp.i;
 	pack->PutDataNotAddLength(index, &value, sizeof(value));
 	return 0;
 }
@@ -1019,7 +1197,7 @@ static int luapacket_pushfixedstringtoindex (lua_State *L)
 		index += strsize;
 	}
 
-	static char s_buf[513] = {0};
+	char s_buf[513] = {0};
 
 	if (secondpush > 0)
 		pack->PutDataNotAddLength(index, (void *)s_buf, (size_t)secondpush);
@@ -1035,11 +1213,6 @@ static int luapacket_push32k (lua_State *L)
 }
 
 static const struct luaL_reg class_packet_function[] = {
-	{"anyfor_ldb", luapacket_anyfor_ldb},
-	{"anyfirst", luapacket_anyfirst},
-	{"anysecond", luapacket_anysecond},
-	{"anythird", luapacket_anythird},
-
 	{"getheadlen", luapacket_getheadlen},
 	{"canpush", luapacket_canpush},
 	{"reset", luapacket_reset},
@@ -1049,9 +1222,7 @@ static const struct luaL_reg class_packet_function[] = {
 	{"gettype", luapacket_gettype},
 	{"settype", luapacket_settype},
 	{"pushstring", luapacket_pushstring},
-	{"getstring", luapacket_getstring},
 	{"pushbigstring", luapacket_pushbigstring},
-	{"getbigstring", luapacket_getbigstring},
 	{"begin", luapacket_begin},
 	{"pushboolean", luapacket_pushboolean},
 	{"getboolean", luapacket_getboolean},
@@ -1069,6 +1240,26 @@ static const struct luaL_reg class_packet_function[] = {
 	{"pushint64toindex", luapacket_pushint64toindex},
 	{"pushfixedstringtoindex", luapacket_pushfixedstringtoindex},
 	{"push32k", luapacket_push32k},
+	{0, 0}
+};
+
+static const struct luaL_reg class_packet_function_main_thread[] = {
+	{"anyfor_ldb", luapacket_anyfor_ldb_main_thread},
+	{"anyfirst", luapacket_anyfirst_main_thread},
+	{"anysecond", luapacket_anysecond_main_thread},
+	{"anythird", luapacket_anythird_main_thread},
+	{"getstring", luapacket_getstring_main_thread},
+	{"getbigstring", luapacket_getbigstring_main_thread},
+	{0, 0}
+};
+
+static const struct luaL_reg class_packet_function_task_thread[] = {
+	{"anyfor_ldb", luapacket_anyfor_ldb_task_thread},
+	{"anyfirst", luapacket_anyfirst_task_thread},
+	{"anysecond", luapacket_anysecond_task_thread},
+	{"anythird", luapacket_anythird_task_thread},
+	{"getstring", luapacket_getstring_task_thread},
+	{"getbigstring", luapacket_getbigstring_task_thread},
 	{0, 0}
 };
 
@@ -1314,6 +1505,7 @@ extern "C" int __declspec(dllexport) luaopen_lxnet(lua_State* L)
 extern "C" int luaopen_lxnet(lua_State* L)
 #endif
 {
+	bool istaskthread = false;
 	luaL_register(L, "_G", g_function);
 
 	luaL_register(L, "lxnet", class_lxnet_function);
@@ -1321,8 +1513,16 @@ extern "C" int luaopen_lxnet(lua_State* L)
 	luaL_register(L, "listener", class_listener_function);
 
 	luaL_register(L, "socketer", class_socketer_function);
+	if (istaskthread)
+		luaL_register(L, "socketer", class_socketer_function_task_thread);
+	else
+		luaL_register(L, "socketer", class_socketer_function_main_thread);
 
 	luaL_register(L, "packet", class_packet_function);
+	if (istaskthread)
+		luaL_register(L, "packet", class_packet_function_task_thread);
+	else
+		luaL_register(L, "packet", class_packet_function_main_thread);
 
 	luaL_register(L, "filelog", class_filelog_function);
 
@@ -1332,7 +1532,7 @@ extern "C" int luaopen_lxnet(lua_State* L)
 
 	luaopen_cjson(L);
 	
-	lua_pop(L, 9);
+	lua_pop(L, 11);
 
 	s_L = L;
 	signal(SIGINT, on_ctrl_hander);
