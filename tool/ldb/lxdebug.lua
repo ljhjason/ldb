@@ -59,6 +59,7 @@ local s_netmgr = {
 
 --管理调试信息
 local s_debugmgr = {
+	alreadyinit = false,			--是否已初始化
 	runmodule = "unknow",			--运行模式。纯脚本、以及执行debug_runonce的嵌入，可高速模式。
 	lastcmd = "",					--上次执行的命令
 	lastnum = 1,					--若上次是l命令，则此值就是上次获取的最后的行数。
@@ -968,6 +969,9 @@ end
 
 --以使用每帧调用函数的方式启动调试
 function startdebug_use_loopfunc(port)
+	if s_debugmgr.alreadyinit then
+		return
+	end
 	if not port then
 		port = 0xdeb
 	end
@@ -985,6 +989,7 @@ function startdebug_use_loopfunc(port)
 
 	dsethook(trace, "l")
 	s_debugmgr.breaktable.linehook = true
+	s_debugmgr.alreadyinit = true
 end
 
 --每帧调用下此函数（此函数内所有操作都是非阻塞的）
