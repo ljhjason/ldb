@@ -32,12 +32,15 @@ extern "C"
 
 #ifdef WIN32
 #define snprintf _snprintf
-#define _FORMAT_64_NUM "%I64d"
+#define _FORMAT_64D_NUM "%I64d"
+#define _FORMAT_64X_NUM "%I64x"
 #else
 #ifdef __x86_64__
-#define _FORMAT_64_NUM "%ld"
+#define _FORMAT_64D_NUM "%ld"
+#define _FORMAT_64X_NUM "%lx"
 #elif __i386__
-#define _FORMAT_64_NUM "%lld"
+#define _FORMAT_64D_NUM "%lld"
+#define _FORMAT_64X_NUM "%llx"
 #endif
 #endif
 
@@ -463,7 +466,13 @@ static int lua_int64_tostring (lua_State *L)
 		uint64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 1);
-	snprintf(buf, sizeof(buf) - 1, _FORMAT_64_NUM, temp.i);
+	const char *opt = luaL_optstring(L, 2, "d");
+	const char *format = _FORMAT_64D_NUM;
+	if (strcmp(opt, "x") == 0)
+	{
+		format = _FORMAT_64X_NUM;
+	}
+	snprintf(buf, sizeof(buf) - 1, format, temp.i);
 	buf[sizeof(buf) - 1] = '\0';
 	lua_pushstring(L, buf);
 	return 1;
