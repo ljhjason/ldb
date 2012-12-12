@@ -29,6 +29,8 @@ extern "C"
 #include "utf8code.h"
 #include "utility.h"
 #include "processinfo.h"
+#include "nodeid.h"
+#include "onetimeid.h"
 
 #ifdef WIN32
 #define snprintf _snprintf
@@ -383,7 +385,7 @@ static int lua_makeint64by32 (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.i = res;
 	lua_pushnumber(L, temp.f);
@@ -396,7 +398,7 @@ static int lua_parseint64 (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = resf;
 	int64 res = temp.i;
@@ -414,7 +416,7 @@ static int lua_bit_or (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 1);
 	v1 = temp.i;
@@ -432,7 +434,7 @@ static int lua_bit_and (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 1);
 	v1 = temp.i;
@@ -449,7 +451,7 @@ static int lua_bit_negate (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 1);
 	temp.i = ~temp.i;
@@ -463,7 +465,7 @@ static int lua_int64_tostring (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 1);
 	const char *opt = luaL_optstring(L, 2, "d");
@@ -1115,7 +1117,7 @@ static int luapacket_pushint64 (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = value;
 	pack->PushInt64(temp.i);
@@ -1129,7 +1131,7 @@ static int luapacket_getint64 (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.i = value;
 	lua_pushnumber(L, temp.f);
@@ -1174,7 +1176,7 @@ static int luapacket_pushint64toindex (lua_State *L)
 	union
 	{
 		double f;
-		uint64 i;
+		int64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 3);
 	int64 value = temp.i;
@@ -1489,6 +1491,171 @@ static const struct luaL_reg class_encode_function[] = {
 	{0, 0}
 };
 
+static int lua_nodeid_init (lua_State *L)
+{
+	int nodeid = luaL_checkinteger(L, 1);
+	lua_pushboolean(L, nodeid_init(nodeid));
+	return 1;
+}
+
+static int lua_nodeid_isvalid (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushboolean(L, nodeid_isvalid(temp.i));
+	return 1;
+}
+
+static int lua_nodeid_isnode (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushboolean(L, nodeid_isnode(temp.i));
+	return 1;
+}
+
+static int lua_nodeid_isworker (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushboolean(L, nodeid_isworker(temp.i));
+	return 1;
+}
+
+static int lua_nodeid_isinsamenode (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	int64 ida = temp.i;
+	temp.f = luaL_checknumber(L, 2);
+	int64 idb = temp.i;
+	lua_pushboolean(L, nodeid_isinsamenode(ida, idb));
+	return 1;
+}
+
+static int lua_nodeid_createworker (lua_State *L)
+{
+	int64 id = nodeid_createworker();
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.i = id;
+	lua_pushnumber(L, temp.f);
+	return 1;
+}
+
+static int lua_nodeid_nodepart (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushinteger(L, nodeid_nodepart(temp.i));
+	return 1;
+}
+
+static int lua_nodeid_workerpart (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushinteger(L, nodeid_workerpart(temp.i));
+	return 1;
+}
+
+static int lua_nodeid_timestamp (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushinteger(L, nodeid_timestamp(temp.i));
+	return 1;
+}
+
+static int lua_nodeid_maxnodeid (lua_State *L)
+{
+	lua_pushinteger(L, nodeid_maxnodeid());
+	return 1;
+}
+
+static const struct luaL_reg class_nodeid_function[] = {
+	{"init", lua_nodeid_init},
+	{"isvalid", lua_nodeid_isvalid},
+	{"isnode", lua_nodeid_isnode},
+	{"isworker", lua_nodeid_isworker},
+	{"isinsamenode", lua_nodeid_isinsamenode},
+	{"createworker", lua_nodeid_createworker},
+	{"nodepart", lua_nodeid_nodepart},
+	{"workerpart", lua_nodeid_workerpart},
+	{"timestamp", lua_nodeid_timestamp},
+	{"maxnodeid", lua_nodeid_maxnodeid},
+	{0, 0}
+};
+
+static int lua_onetimeid_init (lua_State *L)
+{
+	lua_pushboolean(L, onetimeid_init());
+	return 1;
+}
+
+static int lua_onetimeid_create (lua_State *L)
+{
+	int64 id = onetimeid_create();
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.i = id;
+	lua_pushnumber(L, temp.f);
+	return 1;
+}
+
+static int lua_onetimeid_isvalid (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushboolean(L, onetimeid_isvalid(temp.i));
+	return 1;
+}
+
+static const struct luaL_reg class_onetimeid_function[] = {
+	{"init", lua_onetimeid_init},
+	{"create", lua_onetimeid_create},
+	{"isvalid", lua_onetimeid_isvalid},
+	{0, 0}
+};
+
 static lua_State *s_L = NULL;
 
 static void on_ctrl_hander (int sig)
@@ -1539,9 +1706,13 @@ extern "C" int luaopen_lxnet(lua_State* L)
 
 	luaL_register(L, "encode", class_encode_function);
 
+	luaL_register(L, "nodeid", class_nodeid_function);
+
+	luaL_register(L, "onetimeid", class_onetimeid_function);
+
 	luaopen_cjson(L);
 	
-	lua_pop(L, 11);
+	lua_pop(L, 13);
 
 	s_L = L;
 	signal(SIGINT, on_ctrl_hander);

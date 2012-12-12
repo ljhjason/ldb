@@ -194,6 +194,22 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\contrib\base\nodeid.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\contrib\base\onetimeid.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\contrib\base\nodeid.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\contrib\base\onetimeid.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\contrib\base\idmgr.h"
 					>
 				</File>

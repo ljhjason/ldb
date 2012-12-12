@@ -18,7 +18,7 @@ SOURCELIB = -L"./../../contrib/lib/lxnet" -llxnet -L"./../../contrib/lib/luacjso
 #
 #
 #maintest.c tree/rbtree.c  多了子目录，那就直接添加 目录/*.c即可   所有的源文件--  .c文件列表
-CSRCS = $(wildcard  ./*.c ./../../contrib/base/idmgr.c ./../../contrib/base/utf8code.c ./../../contrib/base/utility.c ./../../contrib/base/processinfo.c)
+CSRCS = $(wildcard  ./*.c ./../../contrib/base/idmgr.c ./../../contrib/base/utf8code.c ./../../contrib/base/utility.c ./../../contrib/base/processinfo.c ./../../contrib/base/nodeid.c ./../../contrib/base/onetimeid.c)
 
 CPPSRCS = $(wildcard ./*.cpp)
 
