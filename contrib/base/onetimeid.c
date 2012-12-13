@@ -10,6 +10,8 @@
 #include "onetimeid.h"
 #include "crosslib.h"
 
+static const int max_idpart = 0x1fffffff;
+
 struct onetimeidmgr
 {
 	bool isinit;
@@ -68,7 +70,7 @@ rebegin:
 	}
 	else
 	{
-		if (s_mgr.lastid + 1 >= (0x1fffffff))
+		if (s_mgr.lastid + 1 >= max_idpart)
 		{
 			delay_delay(30);
 			goto rebegin;
@@ -82,12 +84,19 @@ rebegin:
 	return id;
 }
 
+static int onetimeid_idpart (int64 id)
+{
+	return (int)(id & 0x3fffffff);
+}
+
 /**
  * check id is valid.
  * */
 bool onetimeid_isvalid (int64 id)
 {
-	if (id > 0 && ((id >> 62) == 0))
+	if (id > 0 && 
+		((id >> 62) == 0) &&
+		onetimeid_idpart(id) < max_idpart)
 		return true;
 
 	return false;

@@ -58,7 +58,7 @@ int nodeid_workerpart (int64 id);
 /**
  * get timestamp part.
  * */
-int nodeid_timestamp (int64 id);
+int64 nodeid_timestamp (int64 id);
 
 /**
  * get max nodeid.

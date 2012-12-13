@@ -77,7 +77,7 @@ bool nodeid_isvalid (int64 id)
 	int tp = nodeid_gettype(id);
 	int nodepart = nodeid_nodepart(id);
 	int workerpart = nodeid_workerpart(id);
-	int timestamp = nodeid_timestamp(id);
+	int64 timestamp = nodeid_timestamp(id);
 	if (id <= 0)
 		return false;
 	if (tp != nodeid_type_node &&
@@ -94,6 +94,7 @@ bool nodeid_isvalid (int64 id)
 	else if (tp == nodeid_type_worker)
 	{
 		if (workerpart <= 0 ||
+			workerpart >= max_workerid ||
 			timestamp < 0)
 			return false;
 	}
@@ -197,10 +198,10 @@ int nodeid_workerpart (int64 id)
 /**
  * get timestamp part.
  * */
-int nodeid_timestamp (int64 id)
+int64 nodeid_timestamp (int64 id)
 {
 	int64 tmp = id >> 30;
-	return (int)(tmp & 0xffffffff);
+	return tmp & 0xffffffff;
 }
 
 /**

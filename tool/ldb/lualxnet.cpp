@@ -1594,7 +1594,9 @@ static int lua_nodeid_timestamp (lua_State *L)
 		int64 i;
 	}temp;
 	temp.f = luaL_checknumber(L, 1);
-	lua_pushinteger(L, nodeid_timestamp(temp.i));
+	int64 timestamp = nodeid_timestamp(temp.i);
+	temp.i = timestamp;
+	lua_pushnumber(L, temp.f);
 	return 1;
 }
 
