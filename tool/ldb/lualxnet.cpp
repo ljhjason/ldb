@@ -480,6 +480,49 @@ static int lua_int64_tostring (lua_State *L)
 	return 1;
 }
 
+static int lua_string_toint64 (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	const char *value = luaL_checkstring(L, 1);
+	const char *opt = luaL_optstring(L, 2, "d");
+	const char *format = _FORMAT_64D_NUM;
+	if (strcmp(opt, "x") == 0)
+	{
+		format = _FORMAT_64X_NUM;
+	}
+	sscanf(value, format, &temp.i);
+	lua_pushnumber(L, temp.f);
+	return 1;
+}
+
+static int lua_int64_tonumber (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	lua_pushnumber(L, (lua_Number)temp.i);
+	return 1;
+}
+
+static int lua_number_toint64 (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.i = (int64)luaL_checknumber(L, 1);
+	lua_pushnumber(L, temp.f);
+	return 1;
+}
+
 static const struct luaL_reg g_function[] = {
 	{"cpunum", lua_cpunum},
 	{"forlua_dgetinfo", lua_forlua_dgetinfo},
@@ -509,6 +552,9 @@ static const struct luaL_reg g_function[] = {
 	{"bit_and", lua_bit_and},
 	{"bit_negate", lua_bit_negate},
 	{"int64_tostring", lua_int64_tostring},
+	{"string_toint64", lua_string_toint64},
+	{"int64_tonumber", lua_int64_tonumber},
+	{"number_toint64", lua_number_toint64},
 	{0, 0}
 };
 
