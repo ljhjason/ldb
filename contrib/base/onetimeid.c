@@ -10,7 +10,7 @@
 #include "onetimeid.h"
 #include "crosslib.h"
 
-static const int max_idpart = 0x1fffffff;
+static const int max_idpart = 0x1ffff;
 
 struct onetimeidmgr
 {
@@ -27,8 +27,8 @@ static struct onetimeidmgr s_mgr = {false};
 
 /**
  * onetimeid bit of information
- * 64-62	62-30		30-1
- *			32bit		30bit
+ * 64-52	52-20		20-1
+ *			32bit		20bit
  *			timestamp	id
  * */
 
@@ -77,7 +77,7 @@ rebegin:
 		}
 	}
 
-	id |= (s_mgr.lasttimestamp << 30);
+	id |= (s_mgr.lasttimestamp << 20);
 	id |= s_mgr.lastid;
 
 	s_mgr.lastid++;
@@ -86,7 +86,7 @@ rebegin:
 
 static int onetimeid_idpart (int64 id)
 {
-	return (int)(id & 0x3fffffff);
+	return (int)(id & 0x3ffff);
 }
 
 /**
@@ -95,7 +95,7 @@ static int onetimeid_idpart (int64 id)
 bool onetimeid_isvalid (int64 id)
 {
 	if (id > 0 && 
-		((id >> 62) == 0) &&
+		((id >> 52) == 0) &&
 		onetimeid_idpart(id) < max_idpart)
 		return true;
 

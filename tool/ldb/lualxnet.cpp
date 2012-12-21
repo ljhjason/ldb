@@ -376,150 +376,48 @@ static int lua_log_error (lua_State *L)
 static int lua_makeint64by32 (lua_State *L)
 {
 	int32 high = luaL_checkinteger(L, 1);
-	int32 low = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, high <= (0xfffff), 1, "int64 high bit value expected, need less than 0xfffff");
+	uint32 low = (uint32)luaL_checknumber(L, 2);
 	int64 res = 0;
 	res |= high;
 	res <<= 32;
 	res |= low;
-
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.i = res;
-	lua_pushnumber(L, temp.f);
+	lua_pushnumber(L, (lua_Number)res);
 	return 1;
 }
 
 static int lua_parseint64 (lua_State *L)
 {
-	lua_Number resf = luaL_checknumber(L, 1);
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = resf;
-	int64 res = temp.i;
+	int64 res = (int64)luaL_checknumber(L, 1);
 	
-	int32 low = (int32)(res & 0xffffffff);
+	uint32 low = (uint32)(res & 0xffffffff);
 	int32 high = (int32)(res >> 32);
 	lua_pushinteger(L, high);
-	lua_pushinteger(L, low);
+	lua_pushnumber(L, (lua_Number)low);
 	return 2;
 }
 
 static int lua_bit_or (lua_State *L)
 {
-	int64 v1, v2;
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 1);
-	v1 = temp.i;
-	temp.f = luaL_checknumber(L, 2);
-	v2 = temp.i;
-
-	temp.i = v1 | v2;
-	lua_pushnumber(L, temp.f);
+	int64 v1 = (int64)luaL_checknumber(L, 1);
+	int64 v2 = (int64)luaL_checknumber(L, 2);
+	lua_pushnumber(L, (lua_Number)(v1 | v2));
 	return 1;
 }
 
 static int lua_bit_and (lua_State *L)
 {
-	int64 v1, v2;
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 1);
-	v1 = temp.i;
-	temp.f = luaL_checknumber(L, 2);
-	v2 = temp.i;
-
-	temp.i = v1 & v2;
-	lua_pushnumber(L, temp.f);
+	int64 v1 = (int64)luaL_checknumber(L, 1);
+	int64 v2 = (int64)luaL_checknumber(L, 2);
+	lua_pushnumber(L, (lua_Number)(v1 & v2));
 	return 1;
 }
 
 static int lua_bit_negate (lua_State *L)
 {
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 1);
-	temp.i = ~temp.i;
-	lua_pushnumber(L, temp.f);
-	return 1;
-}
-
-static int lua_int64_tostring (lua_State *L)
-{
-	char buf[4096] = {};
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 1);
-	const char *opt = luaL_optstring(L, 2, "d");
-	const char *format = _FORMAT_64D_NUM;
-	if (strcmp(opt, "x") == 0)
-	{
-		format = _FORMAT_64X_NUM;
-	}
-	snprintf(buf, sizeof(buf) - 1, format, temp.i);
-	buf[sizeof(buf) - 1] = '\0';
-	lua_pushstring(L, buf);
-	return 1;
-}
-
-static int lua_string_toint64 (lua_State *L)
-{
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	const char *value = luaL_checkstring(L, 1);
-	const char *opt = luaL_optstring(L, 2, "d");
-	const char *format = _FORMAT_64D_NUM;
-	if (strcmp(opt, "x") == 0)
-	{
-		format = _FORMAT_64X_NUM;
-	}
-	sscanf(value, format, &temp.i);
-	lua_pushnumber(L, temp.f);
-	return 1;
-}
-
-static int lua_int64_tonumber (lua_State *L)
-{
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 1);
-	lua_pushnumber(L, (lua_Number)temp.i);
-	return 1;
-}
-
-static int lua_number_toint64 (lua_State *L)
-{
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.i = (int64)luaL_checknumber(L, 1);
-	lua_pushnumber(L, temp.f);
+	int64 v = (int64)luaL_checknumber(L, 1);
+	v = ~v;
+	lua_pushnumber(L, (lua_Number)v);
 	return 1;
 }
 
@@ -551,10 +449,6 @@ static const struct luaL_reg g_function[] = {
 	{"bit_or", lua_bit_or},
 	{"bit_and", lua_bit_and},
 	{"bit_negate", lua_bit_negate},
-	{"int64_tostring", lua_int64_tostring},
-	{"string_toint64", lua_string_toint64},
-	{"int64_tonumber", lua_int64_tonumber},
-	{"number_toint64", lua_number_toint64},
 	{0, 0}
 };
 
@@ -1160,27 +1054,43 @@ static int luapacket_pushint64 (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
 	lua_Number value = luaL_checknumber(L, 2);
-	union
+	bool normal_value = luaL_opt(L, lua_toboolean, 3, true);
+	if (normal_value)
 	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = value;
-	pack->PushInt64(temp.i);
+		pack->PushInt64((int64)value);
+	}
+	else
+	{
+		union
+		{
+			double f;
+			int64 i;
+		}temp;
+		temp.f = value;
+		pack->PushInt64(temp.i);
+	}
 	return 0;
 }
 
 static int luapacket_getint64 (lua_State *L)
 {
 	MessagePack *pack = get_messagepack(L, 1);
+	bool normal_value = luaL_opt(L, lua_toboolean, 2, true);
 	int64 value = pack->GetInt64();
-	union
+	if (normal_value)
 	{
-		double f;
-		int64 i;
-	}temp;
-	temp.i = value;
-	lua_pushnumber(L, temp.f);
+		lua_pushnumber(L, (lua_Number)value);
+	}
+	else
+	{
+		union
+		{
+			double f;
+			int64 i;
+		}temp;
+		temp.i = value;
+		lua_pushnumber(L, temp.f);
+	}
 	return 1;
 }
 
@@ -1219,14 +1129,24 @@ static int luapacket_pushint64toindex (lua_State *L)
 	MessagePack *pack = get_messagepack(L, 1);
 	int index = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, index >= 0, 2, "pushint64toindex, index need greater than or equal to zero");
-	union
+	lua_Number numbervalue = luaL_checknumber(L, 3);
+	bool normal_value = luaL_opt(L, lua_toboolean, 4, true);
+	int64 value = (int64)numbervalue;
+	if (normal_value)
 	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 3);
-	int64 value = temp.i;
-	pack->PutDataNotAddLength(index, &value, sizeof(value));
+		pack->PutDataNotAddLength(index, &value, sizeof(value));
+	}
+	else
+	{
+		union
+		{
+			double f;
+			int64 i;
+		}temp;
+		temp.f = numbervalue;
+		value = temp.i;
+		pack->PutDataNotAddLength(index, &value, sizeof(value));
+	}
 	return 0;
 }
 
@@ -1652,6 +1572,46 @@ static int lua_nodeid_maxnodeid (lua_State *L)
 	return 1;
 }
 
+static int lua_nodeid_encode (lua_State *L)
+{
+	char buf[4096] = {};
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	temp.f = luaL_checknumber(L, 1);
+	const char *opt = luaL_optstring(L, 2, "d");
+	const char *format = _FORMAT_64D_NUM;
+	if (strcmp(opt, "x") == 0)
+	{
+		format = _FORMAT_64X_NUM;
+	}
+	snprintf(buf, sizeof(buf) - 1, format, temp.i);
+	buf[sizeof(buf) - 1] = '\0';
+	lua_pushstring(L, buf);
+	return 1;
+}
+
+static int lua_nodeid_decode (lua_State *L)
+{
+	union
+	{
+		double f;
+		int64 i;
+	}temp;
+	const char *value = luaL_checkstring(L, 1);
+	const char *opt = luaL_optstring(L, 2, "d");
+	const char *format = _FORMAT_64D_NUM;
+	if (strcmp(opt, "x") == 0)
+	{
+		format = _FORMAT_64X_NUM;
+	}
+	sscanf(value, format, &temp.i);
+	lua_pushnumber(L, temp.f);
+	return 1;
+}
+
 static const struct luaL_reg class_nodeid_function[] = {
 	{"init", lua_nodeid_init},
 	{"isvalid", lua_nodeid_isvalid},
@@ -1663,6 +1623,8 @@ static const struct luaL_reg class_nodeid_function[] = {
 	{"workerpart", lua_nodeid_workerpart},
 	{"timestamp", lua_nodeid_timestamp},
 	{"maxnodeid", lua_nodeid_maxnodeid},
+	{"encode", lua_nodeid_encode},
+	{"decode", lua_nodeid_decode},
 	{0, 0}
 };
 
@@ -1675,25 +1637,14 @@ static int lua_onetimeid_init (lua_State *L)
 static int lua_onetimeid_create (lua_State *L)
 {
 	int64 id = onetimeid_create();
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.i = id;
-	lua_pushnumber(L, temp.f);
+	lua_pushnumber(L, (lua_Number)id);
 	return 1;
 }
 
 static int lua_onetimeid_isvalid (lua_State *L)
 {
-	union
-	{
-		double f;
-		int64 i;
-	}temp;
-	temp.f = luaL_checknumber(L, 1);
-	lua_pushboolean(L, onetimeid_isvalid(temp.i));
+	int64 id = (int64)luaL_checknumber(L, 1);
+	lua_pushboolean(L, onetimeid_isvalid(id));
 	return 1;
 }
 
