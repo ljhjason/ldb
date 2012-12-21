@@ -421,6 +421,44 @@ static int lua_bit_negate (lua_State *L)
 	return 1;
 }
 
+static int lua_number_tointstring (lua_State *L)
+{
+	char buf[4096] = {};
+	lua_Number numbervalue = luaL_checknumber(L, 1);
+	int64 value = (int64)numbervalue;
+	lua_Number tmp = (lua_Number)value;
+	luaL_argcheck(L, tmp == numbervalue, 1, "expected number value less than 0xfffffffffffff");
+
+	const char *opt = luaL_optstring(L, 2, "d");
+	const char *format = _FORMAT_64D_NUM;
+	if (strcmp(opt, "x") == 0)
+	{
+		format = _FORMAT_64X_NUM;
+	}
+	snprintf(buf, sizeof(buf) - 1, format, value);
+	buf[sizeof(buf) - 1] = '\0';
+	lua_pushstring(L, buf);
+	return 1;
+}
+
+static int lua_intstring_tonumber (lua_State *L)
+{
+	const char *value = luaL_checkstring(L, 1);
+	const char *opt = luaL_optstring(L, 2, "d");
+	const char *format = _FORMAT_64D_NUM;
+	if (strcmp(opt, "x") == 0)
+	{
+		format = _FORMAT_64X_NUM;
+	}
+	int64 iv64, tmp;
+	sscanf(value, format, &iv64);
+	lua_Number numbervalue = (lua_Number)iv64;
+	tmp = (int64)numbervalue;
+	luaL_argcheck(L, tmp == iv64, 1, "expected string value less than 0xfffffffffffff");
+	lua_pushnumber(L, numbervalue);
+	return 1;
+}
+
 static const struct luaL_reg g_function[] = {
 	{"cpunum", lua_cpunum},
 	{"forlua_dgetinfo", lua_forlua_dgetinfo},
@@ -449,6 +487,8 @@ static const struct luaL_reg g_function[] = {
 	{"bit_or", lua_bit_or},
 	{"bit_and", lua_bit_and},
 	{"bit_negate", lua_bit_negate},
+	{"number_tointstring", lua_number_tointstring},
+	{"intstring_tonumber", lua_intstring_tonumber},
 	{0, 0}
 };
 
