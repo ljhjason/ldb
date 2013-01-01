@@ -316,6 +316,18 @@ void socketer_getip (struct socketer *self, char *ip, size_t len)
 	ip[len-1] = '\0';
 }
 
+bool socketer_gethostname (char *name, size_t len)
+{
+	if (gethostname(name, len) == 0)
+	{
+		name[len - 1] = '\0';
+		return true;
+	}
+
+	name[0] = '\0';
+	return false;
+}
+
 bool socketer_sendmsg (struct socketer *self, void *data, int len)
 {
 	assert(self != NULL);

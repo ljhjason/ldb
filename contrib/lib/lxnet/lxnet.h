@@ -127,6 +127,9 @@ public:
  */
 bool net_init (size_t bigbufsize, size_t bigbufnum, size_t smallbufsize, size_t smallbufnum, size_t listenernum, size_t socketnum, int threadnum);
 
+/* 获取此进程所在的机器名*/
+const char *GetHostName ();
+
 /* 创建一个用于监听的对象*/
 Listener *Listener_create ();
 

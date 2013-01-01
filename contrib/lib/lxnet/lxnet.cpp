@@ -410,6 +410,14 @@ bool net_init (size_t bigbufsize, size_t bigbufnum, size_t smallbufsize, size_t 
 	return true;
 }
 
+/* 获取此进程所在的机器名*/
+const char *GetHostName ()
+{
+	static char buf[1024*16];
+	socketer_gethostname(buf, sizeof(buf) - 1);
+	return buf;
+}
+
 /* 创建一个用于监听的对象*/
 Listener *Listener_create ()
 {

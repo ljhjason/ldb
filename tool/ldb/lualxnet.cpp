@@ -142,6 +142,12 @@ static lua_State *getthread (lua_State *L, int *arg)
 	}
 }
 
+static int lua_gethostname (lua_State *L)
+{
+	lua_pushstring(L, GetHostName());
+	return 1;
+}
+
 static int lua_cpunum (lua_State *L)
 {
 	lua_pushinteger(L, get_cpunum());
@@ -460,6 +466,7 @@ static int lua_intstring_tonumber (lua_State *L)
 }
 
 static const struct luaL_reg g_function[] = {
+	{"gethostname", lua_gethostname},
 	{"cpunum", lua_cpunum},
 	{"forlua_dgetinfo", lua_forlua_dgetinfo},
 	{"create_guid", lua_create_guid},
