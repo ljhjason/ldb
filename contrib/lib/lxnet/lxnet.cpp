@@ -508,7 +508,7 @@ void net_run ()
 	netrun();
 }
 
-static char s_memory_info[2*1024*1024+1024];
+static char s_memory_info[1024*64];
 /* 获取socket对象池，listen对象池，大块池，小块池的使用情况*/
 const char *net_memory_info ()
 {
@@ -543,7 +543,7 @@ const char *CurrentTimeStr (time_t tval, char *buf, size_t buflen)
 /* 获取网络库通讯详情*/
 const char *net_datainfo ()
 {
-	static char infostr[1024*64];
+	static char infostr[1024*8];
 	if (!s_datamgr.isinit)
 		return "not init!";
 
