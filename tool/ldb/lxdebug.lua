@@ -813,15 +813,27 @@ local function execute_command (cmd)
 end
 
 --初始化网络
-local function initnetwork()
+local function initnetwork(randport)
 	--直接初始化，不用判断是否失败
 	local res = lxnet.init(4096, 100, 2, 10, 1)
 	s_netmgr.listen = listener.create()
 	assert(s_netmgr.listen, "create listener object failed!")
-	local res = listener.listen(s_netmgr.listen, s_netmgr.port, 1)
-	if not res then
-		log_error(sformat("[luafile: %s] [line: %d]: listen %d  failed!", dgetinfo(1, "S").source, dgetinfo(1, "l").currentline, s_netmgr.port))
-		os.exit(1)
+	if randport then
+		local beginport = 6000
+		while true do
+			if listener.listen(s_netmgr.listen, beginport, 1) then
+				break
+			end
+
+			beginport = beginport + 1
+		end
+		s_netmgr.port = beginport
+	else
+		local ac = listener.listen(s_netmgr.listen, s_netmgr.port, 1)
+		if not ac then
+			log_error(sformat("[luafile: %s] [line: %d]: listen %d  failed!", dgetinfo(1, "S").source, dgetinfo(1, "l").currentline, s_netmgr.port))
+			os.exit(1)
+		end
 	end
 	if res then
 		s_netmgr.needrelease = true
@@ -968,21 +980,27 @@ end
 -------------------------------------------------------------------------------
 
 --以使用每帧调用函数的方式启动调试
+--返回所监听的端口，当port小于0时，随机监听一个可用的端口
 function startdebug_use_loopfunc(port)
 	if s_debugmgr.alreadyinit then
-		return
+		return s_netmgr.port
 	end
 	if not port then
 		port = 0xdeb
 	end
 	--防止重复
 	if s_netmgr.port then
-		return
+		return s_netmgr.port
+	end
+	local randport = false
+	if port < 0 then
+		randport = true
 	end
 
 	s_netmgr.port = port
+
 	--初始化网络以及调试相关数据
-	initnetwork()
+	initnetwork(randport)
 
 	--记录下当前使用模式为使用帧函数
 	s_debugmgr.runmodule = "useframefunc"
@@ -990,6 +1008,8 @@ function startdebug_use_loopfunc(port)
 	dsethook(trace, "l")
 	s_debugmgr.breaktable.linehook = true
 	s_debugmgr.alreadyinit = true
+
+	return s_netmgr.port
 end
 
 --每帧调用下此函数（此函数内所有操作都是非阻塞的）
