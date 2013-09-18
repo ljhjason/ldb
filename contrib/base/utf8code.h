@@ -44,7 +44,7 @@ size_t AnsiToUnicode (const char *ansi, wchar_t *utf16, size_t sz);
  * 若sz为0，则计算转换后所需的字符数。此时字符为char类型，切记
  * 若sz大于0，则进行转换并返回转换后的字符数量
  * */
-size_t UnicodeToAnsi (const wchar_t* utf16, char *utf8, size_t sz);
+size_t UnicodeToAnsi (const wchar_t* utf16, char *ansi, size_t sz);
 
 
 /**

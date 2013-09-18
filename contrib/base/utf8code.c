@@ -32,13 +32,13 @@ size_t AnsiToUnicode (const char *ansi, wchar_t *utf16, size_t sz)
  * 若sz为0，则计算转换后所需的字符数。此时字符为char类型，切记
  * 若sz大于0，则进行转换并返回转换后的字符数量
  * */
-size_t UnicodeToAnsi (const wchar_t *utf16, char *utf8, size_t sz)
+size_t UnicodeToAnsi (const wchar_t *utf16, char *ansi, size_t sz)
 {
 	SET_LOCAL;
 	if (sz == 0)
 		return wcstombs(NULL, utf16, 0);
 	SET_LOCAL;
-	return wcstombs(utf8, utf16, sz);
+	return wcstombs(ansi, utf16, sz);
 }
 
 /**
@@ -209,14 +209,14 @@ char *Utf8ToAnsi (const char *utf8)
 	 * 先把字符串从utf8变为Unicode，然后再变为ansi
 	 * */
 	sz = Utf8ToUnicode(utf8, NULL, 0);
-	buf = (wchar_t *)malloc((sz + 2) * sizeof(wchar_t));
+	buf = (wchar_t *)malloc((sz + 3) * sizeof(wchar_t));
 	if (!buf)
 		return NULL;
 	buf[sz] = 0;
 	buf[sz + 1] = 0;
-	sz = Utf8ToUnicode(utf8, buf, sz + 1);
+	sz = Utf8ToUnicode(utf8, buf, sz + 2);
 	sz = UnicodeToAnsi(buf, NULL, 0);
-	out = (char *)malloc(sz + 2);
+	out = (char *)malloc(sz + 3);
 	if (!out)
 	{
 		free(buf);
@@ -225,7 +225,7 @@ char *Utf8ToAnsi (const char *utf8)
 
 	out[sz] = 0;
 	out[sz + 1] = 0;
-	UnicodeToAnsi(buf, out, sz + 1);
+	UnicodeToAnsi(buf, out, sz + 2);
 	free(buf);
 	return out;
 }
@@ -245,14 +245,14 @@ char *AnsiToUtf8 (const char *ansi)
 	 * 先把字符串从ansi变为Unicode，然后再变为utf8
 	 * */
 	sz = AnsiToUnicode(ansi, NULL, 0);
-	buf = (wchar_t *)malloc((sz + 2) * sizeof(wchar_t));
+	buf = (wchar_t *)malloc((sz + 3) * sizeof(wchar_t));
 	if (!buf)
 		return NULL;
 	buf[sz] = 0;
 	buf[sz + 1] = 0;
 	sz = AnsiToUnicode(ansi, buf, sz + 1);
 	sz = UnicodeToUtf8(buf, NULL, 0);
-	out = (char *)malloc(sz + 2);
+	out = (char *)malloc(sz + 3);
 	if (!out)
 	{
 		free(buf);
@@ -261,7 +261,7 @@ char *AnsiToUtf8 (const char *ansi)
 
 	out[sz] = 0;
 	out[sz + 1] = 0;
-	UnicodeToUtf8(buf, out, sz + 1);
+	UnicodeToUtf8(buf, out, sz + 2);
 	free(buf);
 	return out;
 }
