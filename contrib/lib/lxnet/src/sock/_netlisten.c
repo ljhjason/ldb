@@ -130,14 +130,7 @@ bool listener_can_accept (struct listener *self)
 		return false;
 	if (self->sockfd != NET_INVALID_SOCKET)
 	{
-		fd_set set;
-		struct timeval tout;
-		tout.tv_sec = 0;
-		tout.tv_usec = 0;
-	
-		FD_ZERO(&set);
-		FD_SET(self->sockfd, &set);
-		if (select((int)self->sockfd+1,&set,NULL,NULL,&tout) > 0)
+		if (socket_can_read(self->sockfd) > 0)
 			return true;
 	}
 	return false;
@@ -149,8 +142,6 @@ bool listener_can_accept (struct listener *self)
  * */
 struct socketer *listener_accept (struct listener *self, bool bigbuf)
 {
-	fd_set readset;
-	struct timeval tout;
 	int e;
 	assert(self != NULL);
 	assert(!self->isfree);
@@ -159,11 +150,7 @@ struct socketer *listener_accept (struct listener *self, bool bigbuf)
 	if (self->sockfd == NET_INVALID_SOCKET)
 		return NULL;
 
-	FD_ZERO(&readset);
-	FD_SET(self->sockfd, &readset);
-	tout.tv_sec = 0;
-	tout.tv_usec = 0;
-	e = select((int)self->sockfd+1, &readset, NULL, NULL, &tout);
+	e = socket_can_read(self->sockfd);
 	if (1 == e)								/* can accept new connect. */
 	{
 		struct sockaddr_in client_addr;		/* connect address info. */

@@ -17,6 +17,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 
 #endif
 
@@ -102,5 +103,27 @@ static bool set_reuseaddr (net_socket fd)
 bool socket_setopt_for_listen (net_socket sockfd)
 {
 	return socket_set_nonblock(sockfd) && set_reuseaddr(sockfd);
+}
+
+int socket_can_read (net_socket fd)
+{
+#ifdef WIN32
+
+	fd_set set;
+	struct timeval tout;
+	tout.tv_sec = 0;
+	tout.tv_usec = 0;
+	
+	FD_ZERO(&set);
+	FD_SET(fd, &set);
+	return select((int)fd + 1, &set, NULL, NULL, &tout);
+	
+#else
+
+	struct pollfd readset;
+	readset.fd = fd;
+	readset.events = POLLIN | POLLPRI;
+	return poll(&readset, 1, 0);
+#endif
 }
 

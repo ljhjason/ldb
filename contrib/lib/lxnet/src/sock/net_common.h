@@ -83,6 +83,8 @@ bool socket_setopt_for_connect (net_socket sockfd);
 
 bool socket_setopt_for_listen (net_socket sockfd);
 
+int socket_can_read (net_socket fd);
+
 #ifdef __cplusplus
 }
 #endif
