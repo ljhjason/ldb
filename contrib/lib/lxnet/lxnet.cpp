@@ -414,8 +414,30 @@ bool net_init (size_t bigbufsize, size_t bigbufnum, size_t smallbufsize, size_t 
 const char *GetHostName ()
 {
 	static char buf[1024*16];
+	buf[0] = '\0';
 	socketer_gethostname(buf, sizeof(buf) - 1);
 	return buf;
+}
+
+/* 根据域名获取ip地址 */
+const char *GetHostIPByName (const char *hostname)
+{
+	static char buf[128];
+	buf[0] = '\0';
+	socketer_gethostbyname(hostname, buf, sizeof(buf));
+	return buf;
+}
+
+/* 启用/禁用接受的连接导致的错误日志，并返回之前的值 */
+bool SetEnableErrorLog (bool flag)
+{
+	return buf_set_enable_errorlog(flag);
+}
+
+/* 获取当前启用或禁用接受的连接导致的错误日志 */
+bool GetEnableErrorLog ()
+{
+	return buf_get_enable_errorlog();
 }
 
 /* 创建一个用于监听的对象*/
@@ -530,7 +552,7 @@ const char *net_memory_info ()
 }
 
 //获取当前时间。格式为"2010-09-16 23:20:20"
-const char *CurrentTimeStr (time_t tval, char *buf, size_t buflen)
+static const char *CurrentTimeStr (time_t tval, char *buf, size_t buflen)
 {
 	if (buflen < 64)
 		return "null";

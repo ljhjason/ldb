@@ -47,6 +47,7 @@ public:
 public:
 	struct listener *m_self;
 };
+
 /* socketer对象*/
 class Socketer
 {
@@ -129,6 +130,15 @@ bool net_init (size_t bigbufsize, size_t bigbufnum, size_t smallbufsize, size_t 
 
 /* 获取此进程所在的机器名*/
 const char *GetHostName ();
+
+/* 根据域名获取ip地址 */
+const char *GetHostIPByName (const char *hostname);
+
+/* 启用/禁用接受的连接导致的错误日志，并返回之前的值 */
+bool SetEnableErrorLog (bool flag);
+
+/* 获取当前启用或禁用接受的连接导致的错误日志 */
+bool GetEnableErrorLog ();
 
 /* 创建一个用于监听的对象*/
 Listener *Listener_create ();

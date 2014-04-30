@@ -41,6 +41,8 @@ void socketer_getip (struct socketer *self, char *ip, size_t len);
 
 bool socketer_gethostname (char *name, size_t len);
 
+bool socketer_gethostbyname (const char *name, char *buf, size_t len);
+
 bool socketer_sendmsg (struct socketer *self, void *data, int len);
 
 /* 

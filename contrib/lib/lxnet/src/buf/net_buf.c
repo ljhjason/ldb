@@ -22,6 +22,8 @@
 #define max(a, b) (((a) > (b))? (a) : (b))
 #endif
 
+static bool s_enable_errorlog = false;
+
 enum enum_some
 {
 	enum_unknow = 0,
@@ -498,8 +500,6 @@ void buf_addwrite (struct net_buf *self, char *buf, int len)
 	else
 		lst = &self->logiclist;
 
-	blocklist_addwrite(lst, len);
-
 	if (self->use_tgw && (!self->already_do_tgw))
 	{
 		if (buf_try_parse_tgw(lst, &tmpbuf, &newlen))
@@ -512,6 +512,9 @@ void buf_addwrite (struct net_buf *self, char *buf, int len)
 		if (tmpbuf && (newlen > 0))
 			self->dofunc(self->do_logicdata, tmpbuf, newlen);
 	}
+
+	/* end change data size. */
+	blocklist_addwrite(lst, len);
 }
 
 static inline bool blocklist_pushdata (struct blocklist *lst, const char *msgbuf, int len)
@@ -601,7 +604,10 @@ static inline char *blocklist_getmessage (struct blocklist *lst, char *buf, bool
 	{
 		*needclose = true;
 		assert(false && "if ((lst->msglen < sizeof(lst->msglen)) || (lst->msglen >= _MAX_MSG_LEN))");
-		log_error("if ((lst->msglen < sizeof(lst->msglen)) || (lst->msglen >= _MAX_MSG_LEN)), msglen:%d, sockfd:%d, fromline:%d", lst->msglen, sockfd, fromline);
+		if (s_enable_errorlog)
+		{
+			log_error("if ((lst->msglen < sizeof(lst->msglen)) || (lst->msglen >= _MAX_MSG_LEN)), msglen:%d, sockfd:%d, fromline:%d", lst->msglen, sockfd, fromline);
+		}
 		return NULL;
 	}
 
@@ -885,6 +891,20 @@ void bufmgr_release ()
 void bufmgr_meminfo (char *buf, size_t bufsize)
 {
 	bufpool_meminfo(buf, bufsize);
+}
+
+/* enable/disable errorlog, and return before value. */
+bool buf_set_enable_errorlog (bool flag)
+{
+	bool old = s_enable_errorlog;
+	s_enable_errorlog = flag;
+	return old;
+}
+
+/* get now enable or disable errorlog. */
+bool buf_get_enable_errorlog ()
+{
+	return s_enable_errorlog;
 }
 
 

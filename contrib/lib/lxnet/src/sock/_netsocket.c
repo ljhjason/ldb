@@ -328,6 +328,21 @@ bool socketer_gethostname (char *name, size_t len)
 	return false;
 }
 
+bool socketer_gethostbyname (const char *name, char *buf, size_t len)
+{
+	const char *ip;
+	struct hostent *lphost = gethostbyname(name);
+	if (!lphost || len < 64)
+		return false;
+	ip = inet_ntoa(*((struct in_addr *)lphost->h_addr));
+	if (!ip)
+		return false;
+
+	strncpy(buf, ip, len - 1);
+	buf[len - 1] = '\0';
+	return true;
+}
+
 bool socketer_sendmsg (struct socketer *self, void *data, int len)
 {
 	assert(self != NULL);

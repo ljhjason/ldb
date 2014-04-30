@@ -116,6 +116,12 @@ void bufmgr_release ();
 /* get some buf memroy info. */
 void bufmgr_meminfo (char *buf, size_t bufsize);
 
+/* enable/disable errorlog, and return before value. */
+bool buf_set_enable_errorlog (bool flag);
+
+/* get now enable or disable errorlog. */
+bool buf_get_enable_errorlog ();
+
 #ifdef __cplusplus
 }
 #endif
